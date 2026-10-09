@@ -1,0 +1,1 @@
+window.OBSERVATORY_API_ORIGIN = null;
