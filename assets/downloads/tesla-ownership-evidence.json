@@ -1,0 +1,21 @@
+{
+  "status": "dated_primary_evidence_not_current_complete_ledger",
+  "checked_on": "2026-09-22",
+  "event_date": "2026-06-16",
+  "sources": [
+    "https://www.sec.gov/Archives/edgar/data/1318605/000110465926075213/xslF345X06/tm2618092-2_4seq1.xml",
+    "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049270/tsla-20260630.htm"
+  ],
+  "trust_common_shares_reported": 413152109,
+  "direct_restricted_shares_after_settlement": 710172677,
+  "included_2025_performance_award_shares": 423743904,
+  "net_2018_exercise_restricted_shares": 286428773,
+  "remaining_2018_option_shares_reported": 0,
+  "forfeited_2025_interim_award_shares": 96000000,
+  "notes": [
+    "Direct restricted balance includes the 2025 performance award; do not add that award again.",
+    "2018 options were exercised; do not value both the old options and resulting shares.",
+    "Restricted shares require separate vesting and valuation treatment.",
+    "This record is dated evidence, not a verified current total or ownership model."
+  ]
+}
