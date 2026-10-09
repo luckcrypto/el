@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "note": "Reference data for the price engine: dated closing prices and filed share counts. Closes are history, never presented as live prices. Update the base whenever reference.json gets a new reading.",
+  "checked_on": "2026-10-08",
+  "base": {
+    "revision": "forbes-2026-10-06-v1",
+    "date": "2026-10-06",
+    "basis": "Closing price on the day of the Forbes reading"
+  },
+  "closes": [
+    {
+      "date": "2026-10-05",
+      "TSLA": 378.73,
+      "SPCX": 171.09
+    },
+    {
+      "date": "2026-10-06",
+      "TSLA": 380.68,
+      "SPCX": 171.92
+    },
+    {
+      "date": "2026-10-07",
+      "TSLA": 377.81,
+      "SPCX": 167.6
+    }
+  ],
+  "close_sources": {
+    "TSLA": {
+      "name": "Tesla price history, Stock Analysis",
+      "url": "https://stockanalysis.com/stocks/tsla/history/"
+    },
+    "SPCX": {
+      "name": "SpaceX price history, Stock Analysis",
+      "url": "https://stockanalysis.com/stocks/spcx/history/"
+    }
+  },
+  "holdings": [
+    {
+      "symbol": "TSLA",
+      "company": "Tesla",
+      "shares": 413152109,
+      "options": 0,
+      "counted": "413,152,109 common shares held in his trust",
+      "left_out": "286,428,773 restricted shares from the 2018 option exercise, which Forbes removed from its estimate after the April 2026 agreement with Tesla, and the 2025 performance award, which has not vested",
+      "src": "sec-form4",
+      "fact": "trust_shares",
+      "shares_outstanding": 3755723871,
+      "shares_outstanding_note": "Shares outstanding on 16 April 2026, from his Schedule 13G/A",
+      "shares_outstanding_src": "sec-13ga-tsla"
+    },
+    {
+      "symbol": "SPCX",
+      "company": "SpaceX",
+      "shares": 4766475230,
+      "options": 350000000,
+      "counted": "849,494,440 Class A and 3,916,980,790 Class B shares held by his trusts, and 350,000,000 options that move dollar for dollar with the share price",
+      "left_out": "1,302,072,285 restricted Class B shares that have not vested",
+      "src": "sec-13g",
+      "fact": "held_shares",
+      "shares_outstanding": 13181779945,
+      "shares_outstanding_note": "Shares outstanding on 28 July 2026, as reported by Yahoo Finance from the company’s quarterly filing",
+      "shares_outstanding_src": "yahoo-spacex-shares"
+    }
+  ],
+  "feeds": {
+    "robinhood": {
+      "name": "Robinhood stock token prices",
+      "base": "https://api.robinhood.com/rhj/prices/",
+      "chain_id": 4663,
+      "contracts": {
+        "TSLA": "0x322F0929c4625eD5bAd873c95208D54E1c003b2d",
+        "SPCX": "0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa"
+      },
+      "max_age_seconds": 900
+    },
+    "coingecko": {
+      "name": "CoinGecko, tokenised shares on BNB Chain",
+      "url": "https://api.coingecko.com/api/v3/simple/token_price/binance-smart-chain",
+      "contracts": {
+        "TSLA": "0x5b1910eaad6450e50f816082aa078c41f10c292f",
+        "SPCX": "0xbe9d156892e55e7154bcd3cb0fea677f9d3103e1"
+      },
+      "max_age_seconds": 3600
+    },
+    "sanity_band": 0.25
+  },
+  "scenarios": {
+    "note": "Illustrative yearly share price growth for the trajectory page. Assumptions, not forecasts. Everything else he owns is held at today's value.",
+    "cases": [
+      {
+        "id": "base",
+        "name": "Base",
+        "TSLA": 0.07,
+        "SPCX": 0.12,
+        "line": "Steady growth, close to the long-run pace of the US stock market, a little faster for SpaceX."
+      },
+      {
+        "id": "bullish",
+        "name": "Bullish",
+        "TSLA": 0.18,
+        "SPCX": 0.25,
+        "line": "Robotaxis, robots and Starlink all deliver, and the market pays for it."
+      },
+      {
+        "id": "plaid",
+        "name": "Plaid",
+        "TSLA": 0.3,
+        "SPCX": 0.4,
+        "line": "Tesla's fastest setting: everything goes right, every year, for a decade."
+      }
+    ]
+  }
+}

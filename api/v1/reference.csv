@@ -1,0 +1,5 @@
+revision,publisher,estimate_usd,currency,as_of_date,checked_on,is_live,source_url
+forbes-2026-10-06-v1,Forbes,1051000000000,USD,2026-10-06,2026-10-06,false,https://www.forbes.com/real-time-billionaires/
+forbes-2026-10-05-v1,Forbes,981000000000,USD,2026-10-05,2026-10-05,false,https://www.forbes.com/profile/elon-musk/
+forbes-2026-09-30-v1,Forbes,933300000000,USD,2026-09-30,2026-09-30,false,https://www.forbes.com/real-time-billionaires/
+forbes-2026-09-20-v2,Forbes,946500000000,USD,2026-09-20,2026-09-20,false,https://www.forbes.com/profile/elon-musk/

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "reference": {
+    "schema_version": "1.4",
+    "status": "publisher_snapshot",
+    "is_live": false,
+    "currency": "USD",
+    "net_worth_usd": 1051000000000,
+    "as_of_date": "2026-10-06",
+    "as_of_precision": "date",
+    "checked_on": "2026-10-06",
+    "publisher": "Forbes",
+    "source_name": "Forbes Real-Time Billionaires",
+    "source_url": "https://www.forbes.com/real-time-billionaires/",
+    "profile_url": "https://www.forbes.com/profile/elon-musk/",
+    "list_url": "https://www.forbes.com/real-time-billionaires/",
+    "rounding": "Shown on the Forbes Real-Time Billionaires list to the nearest 1 billion US dollars.",
+    "rounding_short": "the nearest $1 billion",
+    "verification": "Read from the Forbes Real-Time Billionaires list on 6 October 2026, which shows the figure with its change since the previous trading day. Underlying assets not independently audited.",
+    "methodology_url": "/methodology.html",
+    "revision": "forbes-2026-10-06-v1",
+    "previous": [
+      {
+        "revision": "forbes-2026-10-05-v1",
+        "net_worth_usd": 981000000000,
+        "as_of_date": "2026-10-05",
+        "checked_on": "2026-10-05",
+        "publisher": "Forbes",
+        "source_url": "https://www.forbes.com/profile/elon-musk/",
+        "rounding_short": "the nearest $1 billion",
+        "replaced_on": "2026-10-06"
+      },
+      {
+        "revision": "forbes-2026-09-30-v1",
+        "net_worth_usd": 933300000000,
+        "as_of_date": "2026-09-30",
+        "checked_on": "2026-09-30",
+        "publisher": "Forbes",
+        "source_url": "https://www.forbes.com/real-time-billionaires/",
+        "rounding_short": "the nearest $100 million",
+        "replaced_on": "2026-10-05"
+      },
+      {
+        "revision": "forbes-2026-09-20-v2",
+        "net_worth_usd": 946500000000,
+        "as_of_date": "2026-09-20",
+        "checked_on": "2026-09-20",
+        "publisher": "Forbes",
+        "source_url": "https://www.forbes.com/profile/elon-musk/",
+        "rounding_short": "the nearest $100 million",
+        "replaced_on": "2026-09-30"
+      }
+    ]
+  },
+  "ownership_model": {
+    "version": "unreviewed-1",
+    "coverage_reviewed": false,
+    "review_due": null,
+    "holdings": []
+  },
+  "methodology_url": "https://elonmusknetworth.org/methodology.html",
+  "corrections_url": "https://elonmusknetworth.org/corrections.html",
+  "limitations": [
+    "Dated publisher reference; not a current personal balance.",
+    "No complete historical series is available.",
+    "Full-dollar formatting does not establish dollar-level accuracy."
+  ]
+}
