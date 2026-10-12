@@ -125,7 +125,48 @@
    '# Anything after a # is a note and is ignored. A mistake is ignored too: the last good reading stays up.',
    fig,ref.as_of_date].concat(last?['TSLA '+last.TSLA,'SPCX '+last.SPCX]:[]).join('\n')+'\n';
  }
- const api={parse,check,closesUsable,build,anchorPrices,values,readoutLabel,rows,fileText,money,moneyCompact,long,ref:null,anchored:false};
+ // Daily checkpoints: our own figure at the US market close, taken with Calculate now and kept, one line a day, in
+ // api/v1/checkpoint.txt. Each line carries the Tesla and SpaceX prices it used, so every page recomputes the dollars
+ // from the stamped Forbes reading and refuses any line whose dollars do not follow exactly from its prices: a typo
+ // in either is caught, and nothing is ever shown that the prices do not produce.
+ const CP=/^(\d{4}-\d{1,2}-\d{1,2})\s+(\d{1,2}):(\d{2})\s*(?:ET)?\s*\|?\s*\$?\s*([\d,]+)\s*\|?\s*TSLA\s*:?\s*\$?\s*(\d+(?:\.\d+)?)\s*\|?\s*SPCX\s*:?\s*\$?\s*(\d+(?:\.\d+)?)$/i;
+ function exact(anchor,prices,quote){
+  const base=(prices.closes||[]).find(c=>c.date===prices.base.date);if(!base||!Array.isArray(prices.holdings))return null;
+  let v=anchor.net_worth_usd;
+  for(const h of prices.holdings){const p=quote[h.symbol];if(!(p>0)||typeof base[h.symbol]!=='number')return null;v+=Math.round((h.shares+(h.options||0))*(p-base[h.symbol]))}
+  return v;
+ }
+ function checkpointLine(date,time,usd,quote){return date+' '+time+' ET | $'+usd.toLocaleString('en-US')+' | TSLA '+quote.TSLA+' | SPCX '+quote.SPCX}
+ function parseCheckpoints(text,anchor,prices,now=Date.now()){
+  const t=new Date(now+14*3600e3),today=t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate());
+  const last=(prices.closes||[])[prices.closes.length-1]||{},byDate={},bad=[];
+  for(const raw of String(text||'').split(/\r?\n/)){
+   const l=raw.replace(/#.*$/,'').trim();if(!l)continue;
+   const m=l.match(CP);if(!m){bad.push({line:l,why:'unreadable'});continue}
+   const [y,mo,d]=m[1].split('-').map(Number),date=realDate(y,mo,d),hh=+m[2],mm=+m[3];
+   const usd=Number(m[4].replace(/,/g,'')),quote={TSLA:+m[5],SPCX:+m[6]},time=pad(hh)+':'+pad(mm);
+   const why=!date||hh>23||mm>59?'bad_date':date>today?'date_in_future':date<anchor.as_of_date?'before_the_reading':hh*60+mm<780?'before_the_close'
+    :['TSLA','SPCX'].some(k=>typeof last[k]==='number'&&Math.abs(quote[k]/last[k]-1)>LIMIT)?'price_far_from_record'
+    :exact(anchor,prices,quote)!==usd?'dollars_do_not_follow_from_prices':'';
+   if(why){bad.push({line:l,why});continue}
+   if(!byDate[date]||byDate[date].time<time)byDate[date]={date,time,usd,quote};
+  }
+  return {list:Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date)),bad};
+ }
+ function checkpointRef(cp,anchor){
+  return {...anchor,net_worth_usd:cp.usd,as_of_date:cp.date,checked_on:cp.date,revision:'checkpoint-'+cp.date+'-'+cp.time.replace(':',''),
+   checkpoint:{date:cp.date,time:cp.time,quote:cp.quote,anchor_revision:anchor.revision,anchor_date:anchor.as_of_date,anchor_usd:anchor.net_worth_usd}};
+ }
+ function checkpointPrices(cp,prices,ref){
+  const closes=(prices.closes||[]).filter(c=>c.date!==cp.date).concat([{date:cp.date,TSLA:cp.quote.TSLA,SPCX:cp.quote.SPCX}]).sort((a,b)=>a.date.localeCompare(b.date));
+  return {...prices,checked_on:cp.date,closes,base:{...prices.base,revision:ref.revision,date:cp.date,basis:'Our checkpoint at the close'}};
+ }
+ const clock=time=>{const [h,m]=time.split(':').map(Number);return (h%12||12)+(m?'.'+pad(m):'')+(h<12?'am':'pm')};
+ function checkpointText(){return ['# Our own figure at each US market close: the stamped Forbes reading, moved by Tesla and SpaceX prices.',
+  '# Each day after 4pm New York (9pm UK), open the site with ?checkpoint on the address, press Calculate now,',
+  '# copy the line it gives you and paste it here on a new line. Keep the older lines: they make the history.',
+  '# Every line is checked against its own prices, so a mistyped line is ignored and the last good one stays up.',''].join('\n')+'\n'}
+ const api={parse,check,closesUsable,build,anchorPrices,values,readoutLabel,rows,fileText,money,moneyCompact,long,exact,checkpointLine,parseCheckpoints,checkpointRef,checkpointPrices,checkpointText,clock,ref:null,anchored:false,checkpoint:null};
 
  if(typeof document!=='undefined'){
   const here=document.currentScript&&document.currentScript.src;
@@ -165,7 +206,7 @@
    api.stamped=data.ref;
    // The file sits in api/v1/ beside the pages: two folders up from assets/js/ in the static copy, at the root on the Worker.
    const target=here?new URL(/\/assets\/js\/[^/]*$/.test(new URL(here).pathname)?'../../api/v1/forbes.txt':'api/v1/forbes.txt',here):new URL('api/v1/forbes.txt',location.href);
-   api.done=fetch(target.href,{cache:'no-cache',credentials:'omit'}).then(r=>r.ok?r.text():null).then(text=>{
+   const forbes=fetch(target.href,{cache:'no-cache',credentials:'omit'}).then(r=>r.ok?r.text():null).then(text=>{
     if(text===null){api.reason=['no_file'];return null}
     const r=parse(text),why=check(r,data.ref,data.prices);api.reason=why;api.parsed=r;
     if(why.length)return null;
@@ -179,6 +220,38 @@
      return ref;
     });
    }).catch(()=>null);
+   const cpUrl=new URL('checkpoint.txt',target);
+   api.done=Promise.all([forbes,fetch(cpUrl.href,{cache:'no-cache',credentials:'omit'}).then(r=>r.ok?r.text():null).catch(()=>null)]).then(([reading,text])=>{
+    if(text===null||!data.prices||!data.prices.holdings)return reading;
+    const {list,bad}=parseCheckpoints(text,data.ref,data.prices);api.checkpoints=list;api.checkpointsRefused=bad;
+    const cp=list[0];
+    // A newer Forbes reading in forbes.txt outranks an older checkpoint; otherwise the latest checkpoint leads.
+    if(!cp||(reading&&reading.as_of_date>cp.date))return reading;
+    const ref=checkpointRef(cp,data.ref),prices=checkpointPrices(cp,data.prices,ref);
+    api.checkpoint={...cp,ref,prices};
+    return ready.then(()=>Promise.all([need('ticker.js','ObservatoryTicker')])).then(([T])=>{
+     paintCheckpoint(cp,list,ref,T);
+     const M=root.ObservatoryMeter;
+     if(M&&M.reanchor&&M.record)M.reanchor({...M.record,checked_on:prices.checked_on,closes:prices.closes,base:prices.base},ref);
+     const D=root.ELON_DATA;if(D)D.checkpoint={v:cp.usd,date:cp.date,time:cp.time,quote:cp.quote};
+     root.dispatchEvent(new CustomEvent('observatory-checkpoint',{detail:{checkpoint:cp,ref,prices,list}}));
+     return reading;
+    });
+   });
+  }
+  function paintCheckpoint(cp,list,ref,T){
+   const when=long(cp.date)+', '+clock(cp.time)+' New York';
+   const first=document.querySelector('#meter-rows .meter-row:first-child');
+   if(first&&T){first.querySelector('dt').textContent='Our checkpoint at the close, '+when;first.querySelector('dd').textContent=T.format(cp.usd)}
+   document.querySelectorAll('[data-ref="meter-base-date"]').forEach(el=>{const p=el.closest('p');if(p)p.textContent='It starts from our checkpoint at the close on '+when+' (the Forbes reading of '+long(data.ref.as_of_date)+', moved by Tesla and SpaceX share prices) and adds what those holdings have gained or lost since. Nothing else moves, so the figure changes only when a price does.'});
+   document.querySelectorAll('[data-ref="meter-basis"]').forEach(el=>el.textContent='From our checkpoint at the close on '+when+'. Press Calculate now for current prices.');
+   const tb=document.getElementById('checkpoint-rows'),box=document.getElementById('checkpoints');
+   if(tb&&box){
+    const fmt=n=>'$'+n.toFixed(2);
+    tb.innerHTML=list.map((c,i)=>{const prev=list[i+1],ch=prev?((c.usd-prev.usd>=0?'+':'\u2212')+'$'+Math.abs(c.usd-prev.usd).toLocaleString('en-US')):'First checkpoint';
+     return '<tr><th scope="row"><time datetime="'+c.date+'T'+c.time+'">'+long(c.date)+'</time></th><td>'+clock(c.time)+'</td><td>$'+c.usd.toLocaleString('en-US')+'</td><td>'+ch+'</td><td>'+fmt(c.quote.TSLA)+'</td><td>'+fmt(c.quote.SPCX)+'</td></tr>'}).join('');
+    box.hidden=false;
+   }
   }
  }
  root.ObservatoryReading=api;

@@ -26,5 +26,6 @@
   img.onerror=()=>{button.disabled=false;button.textContent='Use the SVG download';URL.revokeObjectURL(url)};
   img.src=url;
  });
- $('[data-copy]')?.addEventListener('click',async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText($('#citation').textContent.trim());b.textContent='Citation copied'}catch{b.textContent='Select the citation to copy it'}});
+ // Each copy button names what it copies in data-copy: the citation or the embed code.
+ document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{const target=$(b.dataset.copy),what=b.dataset.copy==='#citation'?'Citation':'Embed code';if(!target)return;try{await navigator.clipboard.writeText(target.textContent.trim());b.textContent=what+' copied'}catch{b.textContent='Select the '+what.toLowerCase()+' to copy it'}}));
 })();

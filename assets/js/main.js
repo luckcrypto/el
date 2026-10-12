@@ -6,7 +6,7 @@
  const longDate=iso=>{const [y,m,d]=String(iso).slice(0,10).split('-').map(Number);return d+' '+months[m-1]+' '+y};
  let ref={};try{ref=JSON.parse($('#reference-data')?.textContent||'{}')}catch{}
 
- let mode='reference';
+ let mode='reference',cp=null;
  const T=window.ObservatoryTicker,M=window.ObservatoryMeter;
  const island=id=>{try{return JSON.parse(document.getElementById(id)?.textContent||'null')}catch{return null}};
 
@@ -47,11 +47,12 @@
  }
  function labelFor(value){
   const u=UNITS[cur];
-  return T.words(value,u)+(mode==='estimate'?', our estimate: the Forbes reading moved by Tesla and SpaceX share prices since':', the Forbes estimate for '+longDate(ref.as_of_date))+(cur==='USD'?'':', converted from US dollars');
+  return T.words(value,u)+(mode==='estimate'?', our estimate: '+(lastEstimate&&/^checkpoint-/.test(lastEstimate.base_revision||'')?'our last checkpoint':'the Forbes reading')+' moved by Tesla and SpaceX share prices since':mode==='checkpoint'&&cp?', our checkpoint at the close on '+longDate(cp.date):', the Forbes estimate for '+longDate(ref.as_of_date))+(cur==='USD'?'':', converted from US dollars');
  }
  const readout=$('#wealth')?T.mount($('#wealth'),null,{label:labelFor,unit:()=>UNITS[cur]}):null;
  function show(usd,animate=true){
   usdShown=usd;const r=perUsd(cur);
+  dispatchEvent(new CustomEvent('observatory-figure',{detail:{usd}}));
   if(UNITS[cur].store==='ethereum')note();
   if(!readout||!(r>0))return;
   readout.set(Math.round(usd*r),{animate:animate&&!still()});
@@ -144,6 +145,22 @@
  }
  if(window.ObservatoryReading?.ref)takeReading(window.ObservatoryReading.ref);
  addEventListener('observatory-reading',e=>takeReading(e.detail.ref));
+ // Our daily checkpoint at the US close (reading.js, api/v1/checkpoint.txt): the headline shows it to the dollar,
+ // with its date and time, until Calculate now moves it on.
+ const clock=t=>{const [h,m]=t.split(':').map(Number);return (h%12||12)+(m?'.'+String(m).padStart(2,'0'):'')+(h<12?'am':'pm')};
+ function takeCheckpoint(c){
+  if(!c||!Number.isSafeInteger(c.usd))return;cp=c;
+  if(mode==='estimate')return;
+  mode='checkpoint';usdShown=c.usd;choose(cur,{animate:true,remember:false});
+  const when=longDate(c.date)+' at '+clock(c.time)+' New York time';
+  const prov=$('#headline-provenance');if(prov)prov.textContent='Our checkpoint at the US market close on '+when+': the Forbes reading of '+longDate(c.ref?c.ref.checkpoint.anchor_date:ref.as_of_date)+', moved by what Tesla and SpaceX shares had done by then.';
+  const tag=$('#age-tag');if(tag){tag.classList.remove('is-stale');tag.classList.add('is-calculated');tag.textContent='To the dollar*, at the close. Calculate now moves it on.'}
+  const note=$('#figure-note-text');
+  if(note){note.textContent='*Our checkpoint, taken after the close on '+when+' from Tesla at $'+Number(c.quote.TSLA).toFixed(2)+' and SpaceX at $'+Number(c.quote.SPCX).toFixed(2)+' a share. Printing it to the dollar does not make it certain to the dollar: it rests on a Forbes reading rounded to '+(ref.rounding_short||'the nearest $1 billion')+' and on filed share counts. ';
+   const a=document.createElement('a');a.href='./history.html#checkpoints';a.textContent='Every checkpoint';note.append(a,'.')}
+ }
+ if(window.ObservatoryReading?.checkpoint)takeCheckpoint(window.ObservatoryReading.checkpoint);
+ addEventListener('observatory-checkpoint',e=>takeCheckpoint({...e.detail.checkpoint,ref:e.detail.ref}));
 
  const timeOf=iso=>{const t=new Date(iso);return isNaN(t)?'':t.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
  const marketClosed=()=>window.ObservatoryMarketClock?.session().state==='closed';
@@ -174,7 +191,7 @@
  function showEstimate(r){
   if(!r)return;
   mode='estimate';show(r.net_worth_usd);
-  $('#headline-provenance').textContent='Our estimate: the Forbes reading of '+longDate(r.base_date)+', moved by what Tesla and SpaceX shares have done since that day’s close.';
+  $('#headline-provenance').textContent=/^checkpoint-/.test(r.base_revision||'')&&cp?'Our estimate: our checkpoint at the close on '+longDate(cp.date)+', moved by what Tesla and SpaceX shares have done since.':'Our estimate: the Forbes reading of '+longDate(r.base_date)+', moved by what Tesla and SpaceX shares have done since that day’s close.';
   const tag=$('#age-tag');tag.classList.remove('is-stale');tag.classList.add('is-calculated');
   lastEstimate=r;tagEstimate(r);
   const note=$('#figure-note-text');
@@ -193,6 +210,33 @@
   }finally{buttons.forEach(b=>{b.disabled=false;b.textContent='Calculate now';b.removeAttribute('aria-busy')});inFlight=false}
  }
  $('#calculate-now')?.addEventListener('click',e=>calculate(e.currentTarget));
+ // Help me increase my net worth: each copy button copies its own address, and stays off until the address is filled in.
+ document.querySelectorAll('[data-copy-address]').forEach(b=>{const t=$(b.dataset.copyAddress);if(!t||!t.dataset.address){b.disabled=true;return}b.disabled=false;
+  b.addEventListener('click',async()=>{const label=b.textContent;try{await navigator.clipboard.writeText(t.dataset.address);b.textContent='Address copied'}catch{b.textContent='Select the address to copy it'}setTimeout(()=>{b.textContent=label},2500)})});
+ // The owner's checkpoint tool: open the home page with ?checkpoint after the US close, press Calculate now, and copy
+ // the line into api/v1/checkpoint.txt. The dollars are worked from the stamped Forbes reading so every page can check them.
+ if(new URLSearchParams(location.search).has('checkpoint')&&M&&$('#age-tag')){
+  const box=document.createElement('div');box.className='checkpoint-tool';box.id='checkpoint-tool';
+  box.innerHTML='<p class="checkpoint-note" id="cp-note" role="status">Checkpoint tool. After 4pm New York (9pm UK), press Calculate now, then copy the line into api/v1/checkpoint.txt.</p><pre class="embed-code" tabindex="0" id="cp-line" aria-label="Checkpoint line">No line yet.</pre><button class="button quiet" type="button" id="cp-copy" disabled>Copy checkpoint line</button><p class="checkpoint-note" id="cp-sources"></p>';
+  $('#age-tag').after(box);
+  const R=window.ObservatoryReading,data=(()=>{try{return JSON.parse(document.getElementById('reading-data').textContent)}catch{return null}})();
+  let line='';
+  const make=r=>{
+   const note=$('#cp-note'),out=$('#cp-line'),btn=$('#cp-copy'),s=window.ObservatoryMarketClock?.session();
+   line='';btn.disabled=true;
+   const src=$('#cp-sources');if(src&&r&&r.sources_tried)src.textContent='Price sources just now: '+(r.sources_tried.length?r.sources_tried.join('; '):'none tried')+'.';
+   if(!r||!R||!data)return;
+   if(!s||s.reason!=='After regular session'){note.textContent=s&&s.state==='open'?'The US market is still open. Come back after 4pm New York (9pm UK).':'No close to record now ('+(s?s.reason.toLowerCase():'market calendar unavailable')+').';out.textContent='No line yet.';return}
+   if(r.lines.some(l=>l.quote.kind!=='equity')){note.textContent=r.lines.some(l=>l.quote.kind==='token')?'Only token prices could be reached, and a checkpoint needs share prices. Try Calculate now again.':'No current share price could be reached. Try Calculate now again.';out.textContent='No line yet.';return}
+   const quote=Object.fromEntries(r.lines.map(l=>[l.symbol,l.price])),usd=R.exact(data.ref,data.prices,quote);
+   if(!Number.isSafeInteger(usd)){note.textContent='The prices could not be worked into a figure.';return}
+   const t=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(r.oldest_price_at||r.calculated_at)).map(p=>[p.type,p.value]));
+   line=R.checkpointLine(s.date,t.hour+':'+t.minute,usd,quote);
+   out.textContent=line;btn.disabled=false;note.textContent='Ready: '+M.whole(usd)+' at the close on '+longDate(s.date)+'. Copy it into api/v1/checkpoint.txt on a new line.';
+  };
+  M.subscribe(r=>{if(!r.seeded)make(r)});
+  $('#cp-copy').addEventListener('click',async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(line);b.textContent='Line copied'}catch{b.textContent='Select the line to copy it'}});
+ }
  $('#refresh-live')?.addEventListener('click',e=>calculate(e.currentTarget));
  if(M){try{M.record=JSON.parse($('#price-record')?.textContent||'null')}catch{}M.subscribe(r=>{paintCount(r);if(mode==='estimate'&&!inFlight)showEstimate(r)})}
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)paintAge()});

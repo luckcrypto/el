@@ -53,7 +53,8 @@
   const q=(Array.isArray(raw?.quotes)?raw.quotes:[]).find(q=>q&&q.symbol===symbol);
   if(!q||typeof q.price!=='number'||!(q.price>0))return null;
   const at=Date.parse(q.observedAt);
-  if(!fresh(at,now,120))return null;
+  // A live price within two minutes; or, when the relay says the US market is shut, the last trade (the close) up to four days old.
+  if(!fresh(at,now,120)&&!(q.marketOpen===false&&now>=at&&now-at<4*864e5))return null;
   return {symbol,price:q.price,at:new Date(at).toISOString(),kind:'equity',provider:q.provider==='Finnhub'?'Finnhub':'Robinhood'};
  }
 
@@ -88,10 +89,15 @@
   const feeds=record.feeds||{},candidates={TSLA:[],SPCX:[]},tried=[];
   if(!offline&&fetcher){
    const jobs=[];
-   if(service)jobs.push(timed(fetcher,service,timeout).then(raw=>{tried.push('service');for(const s of SYMBOLS){const q=fromService(raw,s,now());if(q)candidates[s].push(q)}}).catch(()=>tried.push('service:failed')));
-   if(feeds.robinhood)for(const s of SYMBOLS)jobs.push(timed(fetcher,feeds.robinhood.base+s,timeout).then(raw=>{tried.push('robinhood');const q=fromRobinhood(raw,s,feeds.robinhood,now());if(q)candidates[s].push(q)}).catch(()=>tried.push('robinhood:failed')));
+   // Each source reports what happened, so the owner tool can say why a price was not used:
+   // "failed: Failed to fetch" is the browser refusing (no CORS) or no network; http_4xx is the provider refusing;
+   // "unusable" is an answer the parser could not read or a stale one; "out of band" is more than the sanity band from the last close.
+   const why=e=>String(e&&e.name==='AbortError'?'timed out':e&&e.message||e).slice(0,60);
+   const note=(src,s,q)=>{if(!q){tried.push(src+' '+s+': unusable');return}if(!sane(record,q)){tried.push(src+' '+s+': out of band ('+q.price+')');return}tried.push(src+' '+s+': ok '+q.price);candidates[s].push(q)};
+   if(service)jobs.push(timed(fetcher,service,timeout).then(raw=>{for(const s of SYMBOLS)note('finnhub relay',s,fromService(raw,s,now()))}).catch(e=>tried.push('finnhub relay: failed: '+why(e))));
+   if(feeds.robinhood)for(const s of SYMBOLS)jobs.push(timed(fetcher,feeds.robinhood.base+s,timeout).then(raw=>note('robinhood',s,fromRobinhood(raw,s,feeds.robinhood,now()))).catch(e=>tried.push('robinhood '+s+': failed: '+why(e))));
    if(feeds.coingecko){const c=feeds.coingecko,u=c.url+'?contract_addresses='+SYMBOLS.map(s=>c.contracts[s]).join(',')+'&vs_currencies=usd&include_last_updated_at=true&precision=full';
-    jobs.push(timed(fetcher,u,timeout).then(raw=>{tried.push('coingecko');for(const s of SYMBOLS){const q=fromCoinGecko(raw,s,c,now());if(q)candidates[s].push(q)}}).catch(()=>tried.push('coingecko:failed')));}
+    jobs.push(timed(fetcher,u,timeout).then(raw=>{for(const s of SYMBOLS)note('coingecko',s,fromCoinGecko(raw,s,c,now()))}).catch(e=>tried.push('coingecko: failed: '+why(e))));}
    await Promise.all(jobs);
   }
   const rank={equity:0,token:1};
@@ -117,7 +123,8 @@
   let last=null,lastFetch=0,pending=null,timer=0,gen=0;
   const subs=new Set();
   const saveData=navigator.connection?.saveData===true;
-  const serviceUrl=()=>root.ObservatoryAPI?.available?root.ObservatoryAPI.url('./api/v1/quotes.json'):null;
+  // Our own data service when one is connected; otherwise the price relay the static copy names in api-config.js.
+  const serviceUrl=()=>root.ObservatoryAPI?.available?root.ObservatoryAPI.url('./api/v1/quotes.json'):(typeof root.OBSERVATORY_PRICE_RELAY==='string'&&root.OBSERVATORY_PRICE_RELAY)||null;
   const publish=r=>{last=r;subs.forEach(f=>{try{f(r)}catch{}});return r};
   const seed=()=>{if(!record||!reference)return null;try{const r=compute(record,reference,Object.fromEntries(SYMBOLS.map(s=>[s,recordQuote(record,s)])));r.seeded=true;return r}catch{return null}};
   function refresh(force=false){
