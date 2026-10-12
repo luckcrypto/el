@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Allow: /api/v1/forbes.txt
+Allow: /api/v1/checkpoint.txt
 Disallow: /api/
 Disallow: /embed.html
 Sitemap: https://elonmusknetworth.org/sitemap.xml
