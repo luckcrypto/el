@@ -139,19 +139,42 @@
  function checkpointLine(date,time,usd,quote){return date+' '+time+' ET | $'+usd.toLocaleString('en-US')+' | TSLA '+quote.TSLA+' | SPCX '+quote.SPCX}
  function parseCheckpoints(text,anchor,prices,now=Date.now()){
   const t=new Date(now+14*3600e3),today=t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate());
-  const last=(prices.closes||[])[prices.closes.length-1]||{},byDate={},bad=[];
+  const byDate={},bad=[],ok=[];
   for(const raw of String(text||'').split(/\r?\n/)){
    const l=raw.replace(/#.*$/,'').trim();if(!l)continue;
    const m=l.match(CP);if(!m){bad.push({line:l,why:'unreadable'});continue}
    const [y,mo,d]=m[1].split('-').map(Number),date=realDate(y,mo,d),hh=+m[2],mm=+m[3];
    const usd=Number(m[4].replace(/,/g,'')),quote={TSLA:+m[5],SPCX:+m[6]},time=pad(hh)+':'+pad(mm);
    const why=!date||hh>23||mm>59?'bad_date':date>today?'date_in_future':date<anchor.as_of_date?'before_the_reading':hh*60+mm<780?'before_the_close'
-    :['TSLA','SPCX'].some(k=>typeof last[k]==='number'&&Math.abs(quote[k]/last[k]-1)>LIMIT)?'price_far_from_record'
     :exact(anchor,prices,quote)!==usd?'dollars_do_not_follow_from_prices':'';
    if(why){bad.push({line:l,why});continue}
-   if(!byDate[date]||byDate[date].time<time)byDate[date]={date,time,usd,quote};
+   ok.push({line:l,date,time,usd,quote});
+  }
+  // A price more than 30% from the close before it is a slip, not a market move. Each line is held to the line
+  // before it rather than to the release's own record, so months of real drift never lock the file.
+  ok.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  let last=(prices.closes||[]).filter(c=>c.date<=(ok[0]||{}).date).pop()||(prices.closes||[])[0]||{};
+  for(const c of ok){
+   if(SYMBOLS.some(k=>typeof last[k]==='number'&&Math.abs(c.quote[k]/last[k]-1)>LIMIT)){bad.push({line:c.line,why:'price_far_from_record'});continue}
+   last=c.quote;byDate[c.date]={date:c.date,time:c.time,usd:c.usd,quote:c.quote};
   }
   return {list:Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date)),bad};
+ }
+ // The ledger: each close with what it changed since the one before (or since the Forbes reading, for the first),
+ // split by holding. The parts are taken from the same rounded terms as exact(), so they always add up to the change.
+ function ledger(list,anchor,prices){
+  const base=(prices.closes||[]).find(c=>c.date===prices.base.date)||{},units=Object.fromEntries((prices.holdings||[]).map(h=>[h.symbol,h.shares+(h.options||0)]));
+  const term=(k,p)=>Math.round(units[k]*(p-base[k]));
+  const up=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+  let prev={date:anchor.as_of_date,usd:anchor.net_worth_usd,quote:{TSLA:base.TSLA,SPCX:base.SPCX},forbes:true};
+  const rows=up.map(c=>{
+   const parts=Object.fromEntries(SYMBOLS.map(k=>[k,term(k,c.quote[k])-term(k,prev.quote[k])]));
+   const row={...c,change:c.usd-prev.usd,parts,since:prev.date,sinceForbes:!!prev.forbes};
+   prev=c;return row;
+  }).reverse();
+  const days=rows.filter(r=>!r.sinceForbes);
+  const best=days.length?days.reduce((a,b)=>b.change>a.change?b:a):null,worst=days.length?days.reduce((a,b)=>b.change<a.change?b:a):null;
+  return {rows,best,worst,anchor:{date:anchor.as_of_date,usd:anchor.net_worth_usd},first:rows[rows.length-1]||null,latest:rows[0]||null};
  }
  function checkpointRef(cp,anchor){
   return {...anchor,net_worth_usd:cp.usd,as_of_date:cp.date,checked_on:cp.date,revision:'checkpoint-'+cp.date+'-'+cp.time.replace(':',''),
@@ -166,7 +189,7 @@
   '# Each day after 4pm New York (9pm UK), open the site with ?checkpoint on the address, press Calculate now,',
   '# copy the line it gives you and paste it here on a new line. Keep the older lines: they make the history.',
   '# Every line is checked against its own prices, so a mistyped line is ignored and the last good one stays up.',''].join('\n')+'\n'}
- const api={parse,check,closesUsable,build,anchorPrices,values,readoutLabel,rows,fileText,money,moneyCompact,long,exact,checkpointLine,parseCheckpoints,checkpointRef,checkpointPrices,checkpointText,clock,ref:null,anchored:false,checkpoint:null};
+ const api={parse,check,closesUsable,build,anchorPrices,values,readoutLabel,rows,fileText,money,moneyCompact,long,exact,checkpointLine,parseCheckpoints,ledger,checkpointRef,checkpointPrices,checkpointText,clock,ref:null,anchored:false,checkpoint:null};
 
  if(typeof document!=='undefined'){
   const here=document.currentScript&&document.currentScript.src;
@@ -213,7 +236,7 @@
     const ref=build(r,data.ref),anchored=closesUsable(r,data.prices),prices=anchored?anchorPrices(r,data.prices,ref):null;
     api.ref=ref;api.anchored=anchored;api.prices=prices;
     return ready.then(()=>paint(ref,anchored)).then(()=>{
-     teachElon(ref,prices);
+     teachElon(ref,prices);freshen(ref.as_of_date,ref.net_worth_usd);
      const M=root.ObservatoryMeter;
      if(anchored&&M&&M.reanchor&&M.record)M.reanchor({...M.record,checked_on:prices.checked_on,closes:prices.closes,base:prices.base},ref);
      root.dispatchEvent(new CustomEvent('observatory-reading',{detail:{ref,anchored,prices}}));
@@ -222,6 +245,7 @@
    }).catch(()=>null);
    const cpUrl=new URL('checkpoint.txt',target);
    api.done=Promise.all([forbes,fetch(cpUrl.href,{cache:'no-cache',credentials:'omit'}).then(r=>r.ok?r.text():null).catch(()=>null)]).then(([reading,text])=>{
+    if(typeof text==='string')api.checkpointRaw=text;
     if(text===null||!data.prices||!data.prices.holdings)return reading;
     const {list,bad}=parseCheckpoints(text,data.ref,data.prices);api.checkpoints=list;api.checkpointsRefused=bad;
     const cp=list[0];
@@ -230,7 +254,7 @@
     const ref=checkpointRef(cp,data.ref),prices=checkpointPrices(cp,data.prices,ref);
     api.checkpoint={...cp,ref,prices};
     return ready.then(()=>Promise.all([need('ticker.js','ObservatoryTicker')])).then(([T])=>{
-     paintCheckpoint(cp,list,ref,T);
+     paintCheckpoint(cp,list,ref,T);freshen(cp.date,cp.usd);
      const M=root.ObservatoryMeter;
      if(M&&M.reanchor&&M.record)M.reanchor({...M.record,checked_on:prices.checked_on,closes:prices.closes,base:prices.base},ref);
      const D=root.ELON_DATA;if(D)D.checkpoint={v:cp.usd,date:cp.date,time:cp.time,quote:cp.quote};
@@ -239,6 +263,14 @@
     });
    });
   }
+  // Freshness follows the figure: the byline's Updated date and the page's structured data (Elon Musk's netWorth and
+  // the page's dateModified) move on with a newer reading or checkpoint, never back, and only on pages that carry them.
+  function freshen(date,usd){
+   document.querySelectorAll('time[data-updated]').forEach(t=>{if((t.getAttribute('datetime')||'')<date){t.setAttribute('datetime',date);t.textContent=long(date)}});
+   const s=document.querySelector('script[type="application/ld+json"]');if(!s)return;
+   try{const j=JSON.parse(s.textContent);for(const n of j['@graph']||[]){if(n['@type']==='Person'&&n.netWorth&&Number.isSafeInteger(usd)&&(n.netWorth.validFrom||'')<=date){n.netWorth.value=usd;n.netWorth.validFrom=date}if(n['@type']==='WebPage'&&n.dateModified&&n.dateModified<date)n.dateModified=date}s.textContent=JSON.stringify(j).replaceAll('<','\\u003c')}catch{}
+  }
+  api.freshen=freshen;
   function paintCheckpoint(cp,list,ref,T){
    const when=long(cp.date)+', '+clock(cp.time)+' New York';
    const first=document.querySelector('#meter-rows .meter-row:first-child');
@@ -248,7 +280,8 @@
    const tb=document.getElementById('checkpoint-rows'),box=document.getElementById('checkpoints');
    if(tb&&box){
     const fmt=n=>'$'+n.toFixed(2);
-    tb.innerHTML=list.map((c,i)=>{const prev=list[i+1],ch=prev?((c.usd-prev.usd>=0?'+':'\u2212')+'$'+Math.abs(c.usd-prev.usd).toLocaleString('en-US')):'First checkpoint';
+    const limit=+tb.getAttribute('data-limit')||list.length;
+    tb.innerHTML=list.slice(0,limit).map((c,i)=>{const prev=list[i+1],ch=prev?((c.usd-prev.usd>=0?'+':'\u2212')+'$'+Math.abs(c.usd-prev.usd).toLocaleString('en-US')):'First checkpoint';
      return '<tr><th scope="row"><time datetime="'+c.date+'T'+c.time+'">'+long(c.date)+'</time></th><td>'+clock(c.time)+'</td><td>$'+c.usd.toLocaleString('en-US')+'</td><td>'+ch+'</td><td>'+fmt(c.quote.TSLA)+'</td><td>'+fmt(c.quote.SPCX)+'</td></tr>'}).join('');
     box.hidden=false;
    }

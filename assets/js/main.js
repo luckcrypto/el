@@ -39,7 +39,7 @@
  const fmtUsd=(n,d=0)=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
  function note(){
   const u=UNITS[cur],el=$('#cur-note');if(!el)return;el.dataset.base=String(cur==='USD');
-  if(cur==='USD'){el.textContent='US dollars, the currency Forbes reports in.';return}
+  if(cur==='USD'){el.textContent='Our daily checkpoints, built on live TSLA and SPCX prices, are what make this live calculation work.';return}
   if(u.store){const s=stores[u.store],l=liveStore[u.store],px=l?l.usd:s.usd;
    el.textContent='At '+fmtUsd(px,u.store==='gold'?0:2)+({gold:' a troy ounce, ',bitcoin:' a bitcoin, ',ethereum:' an ether, '}[u.store])+(l?'from '+stores.live.labels[u.store]+' at '+timeOf(l.at)+'.':'the price at '+s.time+' on '+longDate(s.as_of)+'.')+(u.store==='ethereum'&&s.supply&&usdShown?' The funny part: on paper he could own all '+(s.supply/1e6).toFixed(1)+' million ether in existence '+(usdShown/(s.supply*px)).toFixed(1)+' times over.':'');return}
   const r=perUsd(cur),each=(r>=10?r.toFixed(2):r.toFixed(4)),amount=u.pre?u.pre+each:each+' '+u.suf,peg=rates?.pegs?.[cur],off=rates?.official?.[cur];
@@ -157,7 +157,7 @@
   const tag=$('#age-tag');if(tag){tag.classList.remove('is-stale');tag.classList.add('is-calculated');tag.textContent='To the dollar*, at the close. Calculate now moves it on.'}
   const note=$('#figure-note-text');
   if(note){note.textContent='*Our checkpoint, taken after the close on '+when+' from Tesla at $'+Number(c.quote.TSLA).toFixed(2)+' and SpaceX at $'+Number(c.quote.SPCX).toFixed(2)+' a share. Printing it to the dollar does not make it certain to the dollar: it rests on a Forbes reading rounded to '+(ref.rounding_short||'the nearest $1 billion')+' and on filed share counts. ';
-   const a=document.createElement('a');a.href='./history.html#checkpoints';a.textContent='Every checkpoint';note.append(a,'.')}
+   const a=document.createElement('a');a.href='./net-worth-by-day.html';a.textContent='Every close, day by day';note.append(a,'.')}
  }
  if(window.ObservatoryReading?.checkpoint)takeCheckpoint(window.ObservatoryReading.checkpoint);
  addEventListener('observatory-checkpoint',e=>takeCheckpoint({...e.detail.checkpoint,ref:e.detail.ref}));
@@ -212,7 +212,8 @@
  $('#calculate-now')?.addEventListener('click',e=>calculate(e.currentTarget));
  // Help me increase my net worth: each copy button copies its own address, and stays off until the address is filled in.
  document.querySelectorAll('[data-copy-address]').forEach(b=>{const t=$(b.dataset.copyAddress);if(!t||!t.dataset.address){b.disabled=true;return}b.disabled=false;
-  b.addEventListener('click',async()=>{const label=b.textContent;try{await navigator.clipboard.writeText(t.dataset.address);b.textContent='Address copied'}catch{b.textContent='Select the address to copy it'}setTimeout(()=>{b.textContent=label},2500)})});
+  b.addEventListener('click',async()=>{const label=b.textContent,coin=t.dataset.coin||'The';let ok=true;try{await navigator.clipboard.writeText(t.dataset.address);b.textContent='Copied';b.classList.add('is-copied')}catch{ok=false;b.textContent='Select it';const r=document.createRange();r.selectNodeContents(t);const sel=getSelection();sel.removeAllRanges();sel.addRange(r)}
+   window.observatoryToast?.(ok?coin+' address copied. Check its start and end when you paste it.':'Copying is blocked here, so the address is selected: copy it from your keyboard or menu.');setTimeout(()=>{b.textContent=label;b.classList.remove('is-copied')},2500)})});
  // The owner's checkpoint tool: open the home page with ?checkpoint after the US close, press Calculate now, and copy
  // the line into api/v1/checkpoint.txt. The dollars are worked from the stamped Forbes reading so every page can check them.
  if(new URLSearchParams(location.search).has('checkpoint')&&M&&$('#age-tag')){
