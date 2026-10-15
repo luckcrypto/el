@@ -47,7 +47,7 @@
  }
  function labelFor(value){
   const u=UNITS[cur];
-  return T.words(value,u)+(mode==='estimate'?', our estimate: '+(lastEstimate&&/^checkpoint-/.test(lastEstimate.base_revision||'')?'our last checkpoint':'the Forbes reading')+' moved by Tesla and SpaceX share prices since':mode==='checkpoint'&&cp?', our checkpoint at the close on '+longDate(cp.date):', the Forbes estimate for '+longDate(ref.as_of_date))+(cur==='USD'?'':', converted from US dollars');
+  return T.words(value,u)+(mode==='estimate'?', our estimate: '+(lastEstimate&&/^checkpoint-/.test(lastEstimate.base_revision||'')?'our last checkpoint':'the published reading')+' moved by Tesla and SpaceX share prices since':mode==='checkpoint'&&cp?', our checkpoint at the close on '+longDate(cp.date):', the published estimate for '+longDate(ref.as_of_date))+(cur==='USD'?'':', converted from US dollars');
  }
  const readout=$('#wealth')?T.mount($('#wealth'),null,{label:labelFor,unit:()=>UNITS[cur]}):null;
  function show(usd,animate=true){
@@ -133,7 +133,7 @@
  function paintAge(){
   const tag=$('#age-tag');if(!tag||!ref.checked_on||mode!=='reference')return;
   const n=daysSince(ref.checked_on);tag.classList.toggle('is-stale',n>7);
-  tag.textContent=n>7?'The Forbes reading is '+n+' days old. Calculate now moves it by the share prices since.':'Forbes shows this to '+(ref.rounding_short||'the nearest $100 million')+'.';
+  tag.textContent=n>7?'The published reading is '+n+' days old. Calculate now moves it by the share prices since.':'Published to '+(ref.rounding_short||'the nearest $100 million')+'.';
  }
  paintAge();
  // Luck's daily Forbes reading (reading.js): when it is newer than the stamped one, the headline rolls to it.
@@ -153,10 +153,10 @@
   if(mode==='estimate')return;
   mode='checkpoint';usdShown=c.usd;choose(cur,{animate:true,remember:false});
   const when=longDate(c.date)+' at '+clock(c.time)+' New York time';
-  const prov=$('#headline-provenance');if(prov)prov.textContent='Our checkpoint at the US market close on '+when+': the Forbes reading of '+longDate(c.ref?c.ref.checkpoint.anchor_date:ref.as_of_date)+', moved by what Tesla and SpaceX shares had done by then.';
+  const prov=$('#headline-provenance');if(prov)prov.textContent='Our checkpoint at the US market close on '+when+': the published reading of '+longDate(c.ref?c.ref.checkpoint.anchor_date:ref.as_of_date)+', moved by what Tesla and SpaceX shares had done by then.';
   const tag=$('#age-tag');if(tag){tag.classList.remove('is-stale');tag.classList.add('is-calculated');tag.textContent='To the dollar*, at the close. Calculate now moves it on.'}
   const note=$('#figure-note-text');
-  if(note){note.textContent='*Our checkpoint, taken after the close on '+when+' from Tesla at $'+Number(c.quote.TSLA).toFixed(2)+' and SpaceX at $'+Number(c.quote.SPCX).toFixed(2)+' a share. Printing it to the dollar does not make it certain to the dollar: it rests on a Forbes reading rounded to '+(ref.rounding_short||'the nearest $1 billion')+' and on filed share counts. ';
+  if(note){note.textContent='*Our checkpoint, taken after the close on '+when+' from Tesla at $'+Number(c.quote.TSLA).toFixed(2)+' and SpaceX at $'+Number(c.quote.SPCX).toFixed(2)+' a share. Printing it to the dollar does not make it certain to the dollar: it rests on a published reading rounded to '+(ref.rounding_short||'the nearest $1 billion')+' and on filed share counts. ';
    const a=document.createElement('a');a.href='./net-worth-by-day.html';a.textContent='Every close, day by day';note.append(a,'.')}
  }
  if(window.ObservatoryReading?.checkpoint)takeCheckpoint(window.ObservatoryReading.checkpoint);
@@ -191,7 +191,7 @@
  function showEstimate(r){
   if(!r)return;
   mode='estimate';show(r.net_worth_usd);
-  $('#headline-provenance').textContent=/^checkpoint-/.test(r.base_revision||'')&&cp?'Our estimate: our checkpoint at the close on '+longDate(cp.date)+', moved by what Tesla and SpaceX shares have done since.':'Our estimate: the Forbes reading of '+longDate(r.base_date)+', moved by what Tesla and SpaceX shares have done since that day’s close.';
+  $('#headline-provenance').textContent=/^checkpoint-/.test(r.base_revision||'')&&cp?'Our estimate: our checkpoint at the close on '+longDate(cp.date)+', moved by what Tesla and SpaceX shares have done since.':'Our estimate: the published reading of '+longDate(r.base_date)+', moved by what Tesla and SpaceX shares have done since that day’s close.';
   const tag=$('#age-tag');tag.classList.remove('is-stale');tag.classList.add('is-calculated');
   lastEstimate=r;tagEstimate(r);
   const note=$('#figure-note-text');
@@ -206,7 +206,7 @@
   try{
    const [r]=await Promise.all([M.refresh(true),new Promise(ok=>setTimeout(ok,450))]);
    if(r){showEstimate(r);paintCount(r);$('#calc-halo')?.classList.remove('is-calling')}
-   else{const tag=$('#age-tag');tag.textContent='The price record could not be read. The Forbes figure stays.'}
+   else{const tag=$('#age-tag');tag.textContent='The price record could not be read. The published figure stays.'}
   }finally{buttons.forEach(b=>{b.disabled=false;b.textContent='Calculate now';b.removeAttribute('aria-busy')});inFlight=false}
  }
  $('#calculate-now')?.addEventListener('click',e=>calculate(e.currentTarget));

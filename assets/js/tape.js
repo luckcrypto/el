@@ -26,7 +26,7 @@
   }
   const move=r.net_worth_usd-r.base_usd;
   track.querySelectorAll('[data-tape="estimate"]').forEach(e=>e.textContent=M.whole(r.net_worth_usd));
-  track.querySelectorAll('[data-tape="move"]').forEach(e=>e.textContent=(move>=0?'+':'−')+'$'+(Math.abs(move)/1e9).toFixed(1)+'B since '+(/^checkpoint-/.test(r.base_revision||'')?'our checkpoint, ':'Forbes, ')+M.shortDate(r.base_date));
+  track.querySelectorAll('[data-tape="move"]').forEach(e=>e.textContent=(move>=0?'+':'−')+'$'+(Math.abs(move)/1e9).toFixed(1)+'B since '+(/^checkpoint-/.test(r.base_revision||'')?'our checkpoint of ':'the reading of ')+M.shortDate(r.base_date));
   clock();
   if(!filled)fill();
  }

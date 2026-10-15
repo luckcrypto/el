@@ -90,7 +90,7 @@
   const v=ref.net_worth_usd,readings=[ref,...(ref.previous||[])].sort((a,b)=>b.as_of_date.localeCompare(a.as_of_date));
   const out={
    'figure-full':T.format(v),'figure-short':money(v),'figure-compact':moneyCompact(v),'figure-words':T.words(v),
-   'as-of':long(ref.as_of_date),'checked':long(ref.checked_on),'rounding-note':'Forbes shows this to '+(ref.rounding_short||'the nearest $100 million')+'.',
+   'as-of':long(ref.as_of_date),'checked':long(ref.checked_on),'rounding-note':'Published to '+(ref.rounding_short||'the nearest $100 million')+'.',
    'publisher':ref.publisher,'revision':ref.revision,'source-name':ref.source_name||ref.publisher,'source-url':ref.source_url,
    'as-of-clock':ref.as_of_time_label||'the time of reading','rounding':ref.rounding_short||'the nearest $100 million',
    'reading-count':String(readings.length),'first-reading':long(readings[readings.length-1].as_of_date),
@@ -108,7 +108,7 @@
   }
   return out;
  }
- function readoutLabel(ref,T){return T.words(ref.net_worth_usd)+', the '+ref.publisher+' estimate for '+long(ref.as_of_date)}
+ function readoutLabel(ref,T){return T.words(ref.net_worth_usd)+', the published estimate for '+long(ref.as_of_date)}
  function rows(ref){
   const readings=[ref,...(ref.previous||[])].sort((a,b)=>b.as_of_date.localeCompare(a.as_of_date));
   return readings.map((r,i)=>{const next=readings[i+1];const change=next?((r.net_worth_usd-next.net_worth_usd>=0?'+':'−')+money(Math.abs(r.net_worth_usd-next.net_worth_usd))):'First reading';
