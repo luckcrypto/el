@@ -1064,3 +1064,69 @@ a.w:hover .w-go,a.w:focus-visible .w-go{text-decoration:underline;text-underline
 .byline{margin-top:var(--s3);font-size:var(--t0);color:var(--muted)}
 .byline a{color:inherit;text-underline-offset:3px}
 .provenance .byline{text-align:center}
+
+/* Year by year: one log-scale line from the Zip2 sale to the latest reading. The phone gets its own drawing. */
+.w-years,.years-doc{--tr-net:#c98500}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .w-years,:root:not([data-theme="dark"]) .years-doc{--tr-net:#9a6700}}
+:root[data-theme="light"] .w-years,:root[data-theme="light"] .years-doc{--tr-net:#9a6700}
+:root[data-theme="dark"] .w-years,:root[data-theme="dark"] .years-doc{--tr-net:#c98500}
+.w-years.w-years{grid-column:1/-1;--tr-net:var(--gold);--yr-face:#141b22}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .w-years{--yr-face:#f7f5f0}}
+:root[data-theme="light"] .w-years{--yr-face:#f7f5f0}
+:root[data-theme="dark"] .w-years{--yr-face:#141b22}
+.w-years .years-fig{margin:var(--s3) 0 var(--s2)}
+.w-years .w-big>span:first-child{color:inherit}
+.widgets{position:relative;padding:var(--s8) 0}
+.years-doc .years-fig{width:100%;margin-top:var(--s5)}
+.years-plot{position:relative}
+.years-svg{display:block;width:100%;height:auto;overflow:visible}
+.years-svg.is-narrow{display:none}
+.yr-grid{stroke:var(--line);stroke-width:1}
+.yr-grid.is-trillion{stroke:var(--tr-net);stroke-dasharray:3 5;stroke-opacity:.8}
+.yr-axis{fill:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.yr-axis.is-trillion{fill:var(--tr-net);font-weight:500}
+.yr-line{fill:none;stroke:var(--tr-net);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.yr-gap{fill:none;stroke:var(--tr-net);stroke-width:2;stroke-dasharray:2 7;stroke-linecap:round;stroke-opacity:.75}
+.yr-dot{fill:var(--tr-net)}
+.yr-ring{fill:var(--yr-face,var(--ground));stroke:var(--tr-net);stroke-width:2}
+.yr-now{fill:var(--tr-net);stroke:var(--ink);stroke-width:2}
+.yr-tag{fill:var(--ink);font-size:14px;font-weight:500}
+.yr-tag tspan+tspan{font-weight:400;fill:var(--muted)}
+.yr-tag.is-now{fill:var(--tr-net);font-size:16px}
+.yr-tag.is-quiet,.yr-tag.is-quiet tspan{fill:var(--muted);font-weight:400;font-style:italic;font-size:13px}
+.years-key{display:flex;flex-wrap:wrap;align-items:center;column-gap:var(--s5);row-gap:var(--s2);margin-top:var(--s4);font-size:var(--t0);color:var(--muted)}
+.years-key>span{display:inline-flex;align-items:center;gap:8px}
+.years-key i{display:inline-block;flex:none}
+.yr-key-ring,.yr-key-dot,.yr-key-now{width:11px;height:11px;border-radius:50%;box-sizing:border-box}
+.yr-key-ring{border:2px solid var(--tr-net)}
+.yr-key-dot{background:var(--tr-net);transform:scale(.7)}
+.yr-key-now{background:var(--tr-net);border:2px solid var(--ink)}
+.yr-key-gap{width:22px;height:0;border-top:2px dotted var(--tr-net)}
+.years-doc{margin-top:var(--s8)}
+.years-lead{max-width:var(--measure);margin-top:var(--s3);color:var(--muted)}
+.years-lead strong{color:var(--ink);font-weight:500}
+.years-src{max-width:var(--measure);margin-top:var(--s4);font-size:var(--t0);color:var(--muted)}
+.years-table-wrap{margin-top:var(--s6)}
+.years-table td:nth-child(3){white-space:normal;min-width:28ch;color:var(--muted)}
+.years-table td:nth-child(2){font-variant-numeric:tabular-nums}
+/* The line draws itself once, when the chart scrolls in. */
+@media (prefers-reduced-motion:no-preference){
+html.js:not(.motion-paused) :is(.years-fig[data-reveal],.w-years:not(.is-live) .years-fig) .yr-line{stroke-dasharray:1;stroke-dashoffset:1}
+html.js:not(.motion-paused) :is(.years-fig[data-reveal],.w-years:not(.is-live) .years-fig) .yr-gap,html.js:not(.motion-paused) :is(.years-fig[data-reveal],.w-years:not(.is-live) .years-fig) .yr-dot,html.js:not(.motion-paused) :is(.years-fig[data-reveal],.w-years:not(.is-live) .years-fig) .yr-now,html.js:not(.motion-paused) :is(.years-fig[data-reveal],.w-years:not(.is-live) .years-fig) .yr-tag{opacity:0}
+html.js:not(.motion-paused) :is(.years-fig.is-in,.w-years.is-live .years-fig) .yr-line{stroke-dashoffset:0;transition:stroke-dashoffset 1.8s var(--ease) .15s}
+html.js:not(.motion-paused) :is(.years-fig.is-in,.w-years.is-live .years-fig) .yr-gap,html.js:not(.motion-paused) :is(.years-fig.is-in,.w-years.is-live .years-fig) .yr-dot,html.js:not(.motion-paused) :is(.years-fig.is-in,.w-years.is-live .years-fig) .yr-now,html.js:not(.motion-paused) :is(.years-fig.is-in,.w-years.is-live .years-fig) .yr-tag{opacity:1;transition:opacity .5s var(--ease) 1.2s}
+html.js:not(.motion-paused) :is(.years-fig.is-in,.w-years.is-live .years-fig) .yr-gap{stroke-opacity:.75}
+}
+@media (max-width:720px){
+ .years-svg.is-wide{display:none}
+ .years-svg.is-narrow{display:block}
+ .yr-axis{font-size:11px}
+ .yr-tag{font-size:12px}
+ .yr-tag.is-now{font-size:13px}
+ .yr-tag.is-quiet,.yr-tag.is-quiet tspan{font-size:11px}
+ .w-years .yr-axis{font-size:12px}
+ .w-years .yr-tag{font-size:13px}
+ .years-table td:nth-child(3)::before{content:none}
+ .years-table td:nth-child(2){font-size:var(--t2)}
+ .years-table td:nth-child(3){min-width:0}
+}
