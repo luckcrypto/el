@@ -25,6 +25,7 @@
  const SHOW=90; // the chart draws the latest 90 closes; the table keeps them all
 
  function latest(L){
+  if(L.openToday)return openBlock(L.openToday);
   const r=L.latest;
   if(!r)return '<p class="day-when">No close recorded yet. The first one is taken after the next US market close.</p>';
   const t=Math.abs(r.parts.TSLA),s=Math.abs(r.parts.SPCX),sum=t+s||1;
@@ -35,17 +36,29 @@
    +'<dl class="day-parts"><div><dt><i class="tr-key tr-tsla" aria-hidden="true"></i>From his Tesla shares</dt><dd class="'+dir(r.parts.TSLA)+'">'+signed(r.parts.TSLA)+'</dd><dd class="day-px">Closed at $'+r.quote.TSLA.toFixed(2)+'</dd></div>'
    +'<div><dt><i class="tr-key tr-spcx" aria-hidden="true"></i>From his SpaceX shares and options</dt><dd class="'+dir(r.parts.SPCX)+'">'+signed(r.parts.SPCX)+'</dd><dd class="day-px">Closed at $'+r.quote.SPCX.toFixed(2)+'</dd></div></dl>';
  }
+ // This morning, just after the open: the day's first line, measured from the close before it.
+ function openBlock(o){
+  const t=Math.abs(o.parts.TSLA),s=Math.abs(o.parts.SPCX),sum=t+s||1;
+  return '<p class="day-when">Just after the open on <time datetime="'+o.date+'T'+o.time+'">'+weekday(o.date)+' '+long(o.date)+'</time>, '+clock(o.time)+' New York. The close follows after 4pm.</p>'
+   +'<p class="day-figure">'+whole(o.usd)+'</p>'
+   +'<p class="day-change '+dir(o.change)+'"><strong>'+signed(o.change)+'</strong> '+since(o)+'</p>'
+   +'<div class="day-split" aria-hidden="true"><i class="day-split-t" style="flex-grow:'+(t/sum).toFixed(4)+'"></i><i class="day-split-s" style="flex-grow:'+(s/sum).toFixed(4)+'"></i></div>'
+   +'<dl class="day-parts"><div><dt><i class="tr-key tr-tsla" aria-hidden="true"></i>From his Tesla shares</dt><dd class="'+dir(o.parts.TSLA)+'">'+signed(o.parts.TSLA)+'</dd><dd class="day-px">Tesla at $'+o.quote.TSLA.toFixed(2)+'</dd></div>'
+   +'<div><dt><i class="tr-key tr-spcx" aria-hidden="true"></i>From his SpaceX shares and options</dt><dd class="'+dir(o.parts.SPCX)+'">'+signed(o.parts.SPCX)+'</dd><dd class="day-px">SpaceX at $'+o.quote.SPCX.toFixed(2)+'</dd></div></dl>';
+ }
  function records(L){
   const n=L.rows.length,r=L.latest;
   const day=x=>x?'<dd class="'+dir(x.change)+'">'+signedCompact(x.change)+'</dd><dd class="day-px">'+weekday(x.date)+' '+long(x.date)+'</dd>':'<dd class="day-px">From the second close</dd>';
   return '<div><dt>Closes recorded</dt><dd>'+n+'</dd><dd class="day-px">'+(n?'Since '+long(L.first.date):'None yet')+'</dd></div>'
    +'<div><dt>Since the Forbes reading</dt>'+(r?'<dd class="'+dir(r.usd-L.anchor.usd)+'">'+signedCompact(r.usd-L.anchor.usd)+'</dd>':'<dd>None yet</dd>')+'<dd class="day-px">'+compact(L.anchor.usd)+' on '+long(L.anchor.date)+'</dd></div>'
-   +(L.best?'<div><dt>Best day</dt>'+day(L.best)+'</div><div><dt>Worst day</dt>'+day(L.worst)+'</div>'
+   +(L.best?'<div><dt>'+(L.best.change<0?'Smallest fall':'Best day')+'</dt>'+day(L.best)+'</div><div><dt>'+(L.worst.change>0?'Smallest rise':'Worst day')+'</dt>'+day(L.worst)+'</div>'
     :'<div class="day-span"><dt>Best and worst day</dt><dd class="day-wait">From the next close</dd><dd class="day-px">A day here is always one close to the next, so the first close, measured from the Forbes reading, does not count.</dd></div>');
  }
  function rows(L){
-  if(!L.rows.length)return '<tr><td colspan="7">No close recorded yet.</td></tr>';
+  const openCell=d=>{const o=L.openByDate&&L.openByDate[d];return '<td data-label="Just after the open">'+(o?whole(o.usd)+'<small class="'+dir(o.change)+'">'+signed(o.change)+' at '+clock(o.time)+'</small>':'<small>Not taken</small>')+'</td>'};
+  if(!L.rows.length)return '<tr><td colspan="8">No close recorded yet.</td></tr>';
   return L.rows.map(r=>'<tr><th scope="row"><time datetime="'+r.date+'T'+r.time+'">'+weekday(r.date).slice(0,3)+' '+long(r.date)+'</time></th>'
+   +openCell(r.date)
    +'<td class="lg-fig" data-label="Our figure">'+whole(r.usd)+'</td>'
    +'<td class="'+dir(r.change)+'" data-label="Change">'+signed(r.change)+'<small>'+(r.sinceForbes?'since Forbes, '+short(r.since):'since '+short(r.since))+'</small></td>'
    +'<td class="'+dir(r.parts.TSLA)+'" data-label="From Tesla">'+signed(r.parts.TSLA)+'</td>'
@@ -95,8 +108,9 @@
   return 'At the close on '+weekday(r.date)+' '+long(r.date)+', our figure was '+whole(r.usd)+', '+signed(r.change)+' '+since(r)+': '+signed(r.parts.TSLA)+' from his Tesla shares and '+signed(r.parts.SPCX)+' from his SpaceX shares and options. The ledger on this page adds a line after every US close.';
  }
  function csv(L){
-  return 'date,time_new_york,net_worth_usd,change_usd,change_since,from_tesla_usd,from_spacex_usd,tsla_close,spcx_close\n'
-   +L.rows.map(r=>[r.date,r.time,r.usd,r.change,(r.sinceForbes?'forbes ':'')+r.since,r.parts.TSLA,r.parts.SPCX,r.quote.TSLA,r.quote.SPCX].join(',')).join('\n')+'\n';
+  const o=d=>(L.openByDate&&L.openByDate[d])||null;
+  return 'date,time_new_york,net_worth_usd,change_usd,change_since,from_tesla_usd,from_spacex_usd,tsla_close,spcx_close,open_time_new_york,open_net_worth_usd,open_tsla,open_spcx\n'
+   +L.rows.map(r=>[r.date,r.time,r.usd,r.change,(r.sinceForbes?'forbes ':'')+r.since,r.parts.TSLA,r.parts.SPCX,r.quote.TSLA,r.quote.SPCX,o(r.date)?o(r.date).time:'',o(r.date)?o(r.date).usd:'',o(r.date)?o(r.date).quote.TSLA:'',o(r.date)?o(r.date).quote.SPCX:''].join(',')).join('\n')+'\n';
  }
  const api={latest,records,rows,chart,label,answer,csv,count:L=>L.rows.length===1?'1 close':L.rows.length+' closes',SHOW};
 
@@ -106,7 +120,7 @@
   const go=()=>{
    const Rd=R(),data=island('reading-data'),baked=island('ledger-data')||{lines:[]},box=$('day');
    if(!Rd||!box||!data||!data.prices)return;
-   const build=text=>Rd.ledger(Rd.parseCheckpoints(baked.lines.join('\n')+'\n'+(text||''),data.ref,data.prices).list,data.ref,data.prices);
+   const build=text=>{const P=Rd.parseCheckpoints(baked.lines.join('\n')+'\n'+(text||''),data.ref,data.prices);return Rd.ledger(P.list,data.ref,data.prices,P.opens)};
    let L=build('');
    const plot=$('day-chart'),wrap=$('day-plot');
    const draw=()=>{if(!plot||!wrap)return;const W=Math.max(260,Math.round(wrap.clientWidth||720)),H=Math.max(220,Math.round(wrap.clientHeight||300));plot.setAttribute('viewBox','0 0 '+W+' '+H);plot.innerHTML=chart(L,W,H);plot.setAttribute('aria-label',label(L))};
