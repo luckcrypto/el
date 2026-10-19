@@ -145,24 +145,30 @@
    const m=l.match(CP);if(!m){bad.push({line:l,why:'unreadable'});continue}
    const [y,mo,d]=m[1].split('-').map(Number),date=realDate(y,mo,d),hh=+m[2],mm=+m[3];
    const usd=Number(m[4].replace(/,/g,'')),quote={TSLA:+m[5],SPCX:+m[6]},time=pad(hh)+':'+pad(mm);
-   const why=!date||hh>23||mm>59?'bad_date':date>today?'date_in_future':date<anchor.as_of_date?'before_the_reading':hh*60+mm<780?'before_the_close'
+   const why=!date||hh>23||mm>59?'bad_date':date>today?'date_in_future':date<anchor.as_of_date?'before_the_reading':hh*60+mm<570?'before_the_open'
     :exact(anchor,prices,quote)!==usd?'dollars_do_not_follow_from_prices':'';
    if(why){bad.push({line:l,why});continue}
-   ok.push({line:l,date,time,usd,quote});
+   // Before 1pm New York a line is a morning checkpoint, taken just after the open; from 1pm it is the close
+   // (1pm is the close on the market's half days).
+   ok.push({line:l,date,time,usd,quote,kind:hh*60+mm<780?'open':'close'});
   }
   // A price more than 30% from the close before it is a slip, not a market move. Each line is held to the line
   // before it rather than to the release's own record, so months of real drift never lock the file.
   ok.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const byOpen={};let newest=null;
   let last=(prices.closes||[]).filter(c=>c.date<=(ok[0]||{}).date).pop()||(prices.closes||[])[0]||{};
   for(const c of ok){
    if(SYMBOLS.some(k=>typeof last[k]==='number'&&Math.abs(c.quote[k]/last[k]-1)>LIMIT)){bad.push({line:c.line,why:'price_far_from_record'});continue}
-   last=c.quote;byDate[c.date]={date:c.date,time:c.time,usd:c.usd,quote:c.quote};
+   last=c.quote;const row={date:c.date,time:c.time,usd:c.usd,quote:c.quote,kind:c.kind};
+   if(c.kind==='open')byOpen[c.date]=row;else byDate[c.date]=row;newest=row;
   }
-  return {list:Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date)),bad};
+  // list: one close a day, newest first (the ledger is built from these). opens: one morning line a day.
+  // latest: the newest line of either kind, which the headline shows.
+  return {list:Object.values(byDate).sort((a,b)=>b.date.localeCompare(a.date)),opens:Object.values(byOpen).sort((a,b)=>b.date.localeCompare(a.date)),latest:newest,bad};
  }
  // The ledger: each close with what it changed since the one before (or since the Forbes reading, for the first),
  // split by holding. The parts are taken from the same rounded terms as exact(), so they always add up to the change.
- function ledger(list,anchor,prices){
+ function ledger(list,anchor,prices,opens){
   const base=(prices.closes||[]).find(c=>c.date===prices.base.date)||{},units=Object.fromEntries((prices.holdings||[]).map(h=>[h.symbol,h.shares+(h.options||0)]));
   const term=(k,p)=>Math.round(units[k]*(p-base[k]));
   const up=[...list].sort((a,b)=>a.date.localeCompare(b.date));
@@ -174,7 +180,16 @@
   }).reverse();
   const days=rows.filter(r=>!r.sinceForbes);
   const best=days.length?days.reduce((a,b)=>b.change>a.change?b:a):null,worst=days.length?days.reduce((a,b)=>b.change<a.change?b:a):null;
-  return {rows,best,worst,anchor:{date:anchor.as_of_date,usd:anchor.net_worth_usd},first:rows[rows.length-1]||null,latest:rows[0]||null};
+  // Morning lines: each measured from the close before it, so the open shows how the day started. A morning line
+  // newer than every close is today's, and leads the page until that day's close arrives.
+  const asc=[...rows].reverse(),firstPrev={date:anchor.as_of_date,usd:anchor.net_worth_usd,quote:{TSLA:base.TSLA,SPCX:base.SPCX},forbes:true};
+  const openRows=(opens||[]).map(o=>{
+   const p=asc.filter(r=>r.date<o.date).pop()||firstPrev;
+   return {...o,kind:'open',change:o.usd-p.usd,parts:Object.fromEntries(SYMBOLS.map(k=>[k,term(k,o.quote[k])-term(k,p.quote[k])])),since:p.date,sinceForbes:!!p.forbes};
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+  const openByDate=Object.fromEntries(openRows.map(o=>[o.date,o]));
+  const today=openRows[0]&&(!rows[0]||openRows[0].date>rows[0].date)?openRows[0]:null;
+  return {rows,best,worst,anchor:{date:anchor.as_of_date,usd:anchor.net_worth_usd},first:rows[rows.length-1]||null,latest:rows[0]||null,opens:openRows,openByDate,openToday:today};
  }
  function checkpointRef(cp,anchor){
   return {...anchor,net_worth_usd:cp.usd,as_of_date:cp.date,checked_on:cp.date,revision:'checkpoint-'+cp.date+'-'+cp.time.replace(':',''),
@@ -182,14 +197,17 @@
  }
  function checkpointPrices(cp,prices,ref){
   const closes=(prices.closes||[]).filter(c=>c.date!==cp.date).concat([{date:cp.date,TSLA:cp.quote.TSLA,SPCX:cp.quote.SPCX}]).sort((a,b)=>a.date.localeCompare(b.date));
-  return {...prices,checked_on:cp.date,closes,base:{...prices.base,revision:ref.revision,date:cp.date,basis:'Our checkpoint at the close'}};
+  return {...prices,checked_on:cp.date,closes,base:{...prices.base,revision:ref.revision,date:cp.date,basis:cp.kind==='open'?'Our checkpoint just after the open':'Our checkpoint at the close'}};
  }
  const clock=time=>{const [h,m]=time.split(':').map(Number);return (h%12||12)+(m?'.'+pad(m):'')+(h<12?'am':'pm')};
- function checkpointText(){return ['# Our own figure at each US market close: the stamped Forbes reading, moved by Tesla and SpaceX prices.',
-  '# Each day after 4pm New York (9pm UK), open the site with ?checkpoint on the address, press Calculate now,',
-  '# copy the line it gives you and paste it here on a new line. Keep the older lines: they make the history.',
+ // How a checkpoint is named in a sentence: 'at the close on 15 October 2026' or 'just after the open on 19 October 2026'.
+ const at=cp=>(cp&&cp.kind==='open'?'just after the open':'at the close')+' on '+long(cp.date);
+ function checkpointText(){return ['# Our own figure just after each US market open and at each close: the stamped Forbes reading, moved by Tesla and SpaceX prices.',
+  '# Twice each trading day: from 10am New York, half an hour after the open, and after 4pm New York, once it has closed.',
+  '# Open the site with ?checkpoint on the address, press Calculate now, copy the line it gives you and paste it here',
+  '# on a new line. Lines before 1pm New York count as the morning line, from 1pm as the close. Keep the older lines.',
   '# Every line is checked against its own prices, so a mistyped line is ignored and the last good one stays up.',''].join('\n')+'\n'}
- const api={parse,check,closesUsable,build,anchorPrices,values,readoutLabel,rows,fileText,money,moneyCompact,long,exact,checkpointLine,parseCheckpoints,ledger,checkpointRef,checkpointPrices,checkpointText,clock,ref:null,anchored:false,checkpoint:null};
+ const api={parse,check,closesUsable,build,anchorPrices,values,readoutLabel,rows,fileText,money,moneyCompact,long,exact,checkpointLine,parseCheckpoints,ledger,checkpointRef,checkpointPrices,checkpointText,clock,at,ref:null,anchored:false,checkpoint:null};
 
  if(typeof document!=='undefined'){
   const here=document.currentScript&&document.currentScript.src;
@@ -247,8 +265,8 @@
    api.done=Promise.all([forbes,fetch(cpUrl.href,{cache:'no-cache',credentials:'omit'}).then(r=>r.ok?r.text():null).catch(()=>null)]).then(([reading,text])=>{
     if(typeof text==='string')api.checkpointRaw=text;
     if(text===null||!data.prices||!data.prices.holdings)return reading;
-    const {list,bad}=parseCheckpoints(text,data.ref,data.prices);api.checkpoints=list;api.checkpointsRefused=bad;
-    const cp=list[0];
+    const {list,opens,latest,bad}=parseCheckpoints(text,data.ref,data.prices);api.checkpoints=list;api.checkpointOpens=opens;api.checkpointsRefused=bad;
+    const cp=latest;
     // A newer Forbes reading in forbes.txt outranks an older checkpoint; otherwise the latest checkpoint leads.
     if(!cp||(reading&&reading.as_of_date>cp.date))return reading;
     const ref=checkpointRef(cp,data.ref),prices=checkpointPrices(cp,data.prices,ref);
@@ -257,7 +275,7 @@
      paintCheckpoint(cp,list,ref,T);freshen(cp.date,cp.usd);
      const M=root.ObservatoryMeter;
      if(M&&M.reanchor&&M.record)M.reanchor({...M.record,checked_on:prices.checked_on,closes:prices.closes,base:prices.base},ref);
-     const D=root.ELON_DATA;if(D)D.checkpoint={v:cp.usd,date:cp.date,time:cp.time,quote:cp.quote};
+     const D=root.ELON_DATA;if(D)D.checkpoint={v:cp.usd,date:cp.date,time:cp.time,quote:cp.quote,kind:cp.kind};
      root.dispatchEvent(new CustomEvent('observatory-checkpoint',{detail:{checkpoint:cp,ref,prices,list}}));
      return reading;
     });
@@ -274,9 +292,10 @@
   function paintCheckpoint(cp,list,ref,T){
    const when=long(cp.date)+', '+clock(cp.time)+' New York';
    const first=document.querySelector('#meter-rows .meter-row:first-child');
-   if(first&&T){first.querySelector('dt').textContent='Our checkpoint at the close, '+when;first.querySelector('dd').textContent=T.format(cp.usd)}
-   document.querySelectorAll('[data-ref="meter-base-date"]').forEach(el=>{const p=el.closest('p');if(p)p.textContent='It starts from our checkpoint at the close on '+when+' (the Forbes reading of '+long(data.ref.as_of_date)+', moved by Tesla and SpaceX share prices) and adds what those holdings have gained or lost since. Nothing else moves, so the figure changes only when a price does.'});
-   document.querySelectorAll('[data-ref="meter-basis"]').forEach(el=>el.textContent='From our checkpoint at the close on '+when+'. Press Calculate now for current prices.');
+   const name=cp.kind==='open'?'just after the open':'at the close';
+   if(first&&T){first.querySelector('dt').textContent='Our checkpoint '+name+', '+when;first.querySelector('dd').textContent=T.format(cp.usd)}
+   document.querySelectorAll('[data-ref="meter-base-date"]').forEach(el=>{const p=el.closest('p');if(p)p.textContent='It starts from our checkpoint '+name+' on '+when+' (the Forbes reading of '+long(data.ref.as_of_date)+', moved by Tesla and SpaceX share prices) and adds what those holdings have gained or lost since. Nothing else moves, so the figure changes only when a price does.'});
+   document.querySelectorAll('[data-ref="meter-basis"]').forEach(el=>el.textContent='From our checkpoint '+name+' on '+when+'. Press Calculate now for current prices.');
    const tb=document.getElementById('checkpoint-rows'),box=document.getElementById('checkpoints');
    if(tb&&box){
     const fmt=n=>'$'+n.toFixed(2);

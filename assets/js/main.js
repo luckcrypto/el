@@ -47,7 +47,7 @@
  }
  function labelFor(value){
   const u=UNITS[cur];
-  return T.words(value,u)+(mode==='estimate'?', our estimate: '+(lastEstimate&&/^checkpoint-/.test(lastEstimate.base_revision||'')?'our last checkpoint':'the published reading')+' moved by Tesla and SpaceX share prices since':mode==='checkpoint'&&cp?', our checkpoint at the close on '+longDate(cp.date):', the published estimate for '+longDate(ref.as_of_date))+(cur==='USD'?'':', converted from US dollars');
+  return T.words(value,u)+(mode==='estimate'?', our estimate: '+(lastEstimate&&/^checkpoint-/.test(lastEstimate.base_revision||'')?'our last checkpoint':'the published reading')+' moved by Tesla and SpaceX share prices since':mode==='checkpoint'&&cp?', our checkpoint '+(cp.kind==='open'?'just after the open':'at the close')+' on '+longDate(cp.date):', the published estimate for '+longDate(ref.as_of_date))+(cur==='USD'?'':', converted from US dollars');
  }
  const readout=$('#wealth')?T.mount($('#wealth'),null,{label:labelFor,unit:()=>UNITS[cur]}):null;
  function show(usd,animate=true){
@@ -153,10 +153,10 @@
   if(mode==='estimate')return;
   mode='checkpoint';usdShown=c.usd;choose(cur,{animate:true,remember:false});
   const when=longDate(c.date)+' at '+clock(c.time)+' New York time';
-  const prov=$('#headline-provenance');if(prov)prov.textContent='Our checkpoint at the US market close on '+when+': the published reading of '+longDate(c.ref?c.ref.checkpoint.anchor_date:ref.as_of_date)+', moved by what Tesla and SpaceX shares had done by then.';
-  const tag=$('#age-tag');if(tag){tag.classList.remove('is-stale');tag.classList.add('is-calculated');tag.textContent='To the dollar*, at the close. Calculate now moves it on.'}
+  const prov=$('#headline-provenance');if(prov)prov.textContent=(c.kind==='open'?'Our checkpoint just after the US market opened, on ':'Our checkpoint at the US market close on ')+when+': the published reading of '+longDate(c.ref?c.ref.checkpoint.anchor_date:ref.as_of_date)+', moved by what Tesla and SpaceX shares had done by then.';
+  const tag=$('#age-tag');if(tag){tag.classList.remove('is-stale');tag.classList.add('is-calculated');tag.textContent=c.kind==='open'?'To the dollar*, just after the open. Calculate now moves it on.':'To the dollar*, at the close. Calculate now moves it on.'}
   const note=$('#figure-note-text');
-  if(note){note.textContent='*Our checkpoint, taken after the close on '+when+' from Tesla at $'+Number(c.quote.TSLA).toFixed(2)+' and SpaceX at $'+Number(c.quote.SPCX).toFixed(2)+' a share. Printing it to the dollar does not make it certain to the dollar: it rests on a published reading rounded to '+(ref.rounding_short||'the nearest $1 billion')+' and on filed share counts. ';
+  if(note){note.textContent='*Our checkpoint, taken '+(c.kind==='open'?'just after the open on ':'after the close on ')+when+' from Tesla at $'+Number(c.quote.TSLA).toFixed(2)+' and SpaceX at $'+Number(c.quote.SPCX).toFixed(2)+' a share. Printing it to the dollar does not make it certain to the dollar: it rests on a published reading rounded to '+(ref.rounding_short||'the nearest $1 billion')+' and on filed share counts. ';
    const a=document.createElement('a');a.href='./net-worth-by-day.html';a.textContent='Every close, day by day';note.append(a,'.')}
  }
  if(window.ObservatoryReading?.checkpoint)takeCheckpoint(window.ObservatoryReading.checkpoint);
@@ -191,7 +191,7 @@
  function showEstimate(r){
   if(!r)return;
   mode='estimate';show(r.net_worth_usd);
-  $('#headline-provenance').textContent=/^checkpoint-/.test(r.base_revision||'')&&cp?'Our estimate: our checkpoint at the close on '+longDate(cp.date)+', moved by what Tesla and SpaceX shares have done since.':'Our estimate: the published reading of '+longDate(r.base_date)+', moved by what Tesla and SpaceX shares have done since that day’s close.';
+  $('#headline-provenance').textContent=/^checkpoint-/.test(r.base_revision||'')&&cp?'Our estimate: our checkpoint '+(cp.kind==='open'?'just after the open':'at the close')+' on '+longDate(cp.date)+', moved by what Tesla and SpaceX shares have done since.':'Our estimate: the published reading of '+longDate(r.base_date)+', moved by what Tesla and SpaceX shares have done since that day’s close.';
   const tag=$('#age-tag');tag.classList.remove('is-stale');tag.classList.add('is-calculated');
   lastEstimate=r;tagEstimate(r);
   const note=$('#figure-note-text');
@@ -218,7 +218,7 @@
  // the line into api/v1/checkpoint.txt. The dollars are worked from the stamped Forbes reading so every page can check them.
  if(new URLSearchParams(location.search).has('checkpoint')&&M&&$('#age-tag')){
   const box=document.createElement('div');box.className='checkpoint-tool';box.id='checkpoint-tool';
-  box.innerHTML='<p class="checkpoint-note" id="cp-note" role="status">Checkpoint tool. After 4pm New York (9pm UK), press Calculate now, then copy the line into api/v1/checkpoint.txt.</p><pre class="embed-code" tabindex="0" id="cp-line" aria-label="Checkpoint line">No line yet.</pre><button class="button quiet" type="button" id="cp-copy" disabled>Copy checkpoint line</button><p class="checkpoint-note" id="cp-sources"></p>';
+  box.innerHTML='<p class="checkpoint-note" id="cp-note" role="status">Checkpoint tool. Twice a trading day: from 10am New York, half an hour after the open, and after 4pm New York, once it has closed. Press Calculate now, then copy the line into api/v1/checkpoint.txt.</p><pre class="embed-code" tabindex="0" id="cp-line" aria-label="Checkpoint line">No line yet.</pre><button class="button quiet" type="button" id="cp-copy" disabled>Copy checkpoint line</button><p class="checkpoint-note" id="cp-sources"></p>';
   $('#age-tag').after(box);
   const R=window.ObservatoryReading,data=(()=>{try{return JSON.parse(document.getElementById('reading-data').textContent)}catch{return null}})();
   let line='';
@@ -227,13 +227,15 @@
    line='';btn.disabled=true;
    const src=$('#cp-sources');if(src&&r&&r.sources_tried)src.textContent='Price sources just now: '+(r.sources_tried.length?r.sources_tried.join('; '):'none tried')+'.';
    if(!r||!R||!data)return;
-   if(!s||s.reason!=='After regular session'){note.textContent=s&&s.state==='open'?'The US market is still open. Come back after 4pm New York (9pm UK).':'No close to record now ('+(s?s.reason.toLowerCase():'market calendar unavailable')+').';out.textContent='No line yet.';return}
+   // A morning line from 10am to 12.59pm New York while the market is open; a close line once it has shut.
+   const nyt=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(p=>[p.type,p.value])),mins=+nyt.hour*60+ +nyt.minute,morning=s&&s.state==='open'&&mins>=600&&mins<780;
+   if(!s||(!morning&&s.reason!=='After regular session')){note.textContent=s&&s.state==='open'?(mins<600?'The market has just opened. Come back from 10am New York for the morning line.':'The market is open. The close line is ready after 4pm New York.'):'No checkpoint to record now ('+(s?s.reason.toLowerCase():'market calendar unavailable')+').';out.textContent='No line yet.';return}
    if(r.lines.some(l=>l.quote.kind!=='equity')){note.textContent=r.lines.some(l=>l.quote.kind==='token')?'Only token prices could be reached, and a checkpoint needs share prices. Try Calculate now again.':'No current share price could be reached. Try Calculate now again.';out.textContent='No line yet.';return}
    const quote=Object.fromEntries(r.lines.map(l=>[l.symbol,l.price])),usd=R.exact(data.ref,data.prices,quote);
    if(!Number.isSafeInteger(usd)){note.textContent='The prices could not be worked into a figure.';return}
    const t=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(r.oldest_price_at||r.calculated_at)).map(p=>[p.type,p.value]));
    line=R.checkpointLine(s.date,t.hour+':'+t.minute,usd,quote);
-   out.textContent=line;btn.disabled=false;note.textContent='Ready: '+M.whole(usd)+' at the close on '+longDate(s.date)+'. Copy it into api/v1/checkpoint.txt on a new line.';
+   out.textContent=line;btn.disabled=false;note.textContent='Ready: '+M.whole(usd)+(morning?' just after the open on ':' at the close on ')+longDate(s.date)+'. Copy it into api/v1/checkpoint.txt on a new line.';
   };
   M.subscribe(r=>{if(!r.seeded)make(r)});
   $('#cp-copy').addEventListener('click',async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(line);b.textContent='Line copied'}catch{b.textContent='Select the line to copy it'}});
