@@ -1,5 +1,10 @@
+# Our own figure just after each US market open and at each close: the stamped Forbes reading, moved by Tesla and SpaceX prices.
+# Twice each trading day: from 10am New York, half an hour after the open, and after 4pm New York, once it has closed.
+# Open the site with ?checkpoint on the address, press Calculate now, copy the line it gives you and paste it here
+# on a new line. Lines before 1pm New York count as the morning line, from 1pm as the close. Keep the older lines.
+# Every line is checked against its own prices, so a mistyped line is ignored and the last good one stays up.
+
 2026-10-12 16:00 ET | $1,006,415,107,456 | TSLA 378.03 | SPCX 163.42
 2026-10-13 16:00 ET | $970,056,931,969 | TSLA 375.23 | SPCX 156.54
 2026-10-14 16:00 ET | $944,312,632,941 | TSLA 367.16 | SPCX 152.16
 2026-10-15 16:00 ET | $924,250,232,673 | TSLA 362.44 | SPCX 148.62
-2026-10-16 16:00 ET | $907,809,027,545 | TSLA 354.72 | SPCX 146.03
