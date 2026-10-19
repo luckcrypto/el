@@ -30,11 +30,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&amp;display=swap">
-<link rel="stylesheet" href="./assets/css/site.css?v=47456e06">
+<link rel="stylesheet" href="./assets/css/site.css?v=8717ea83">
 <script>(function(d){d.className=d.className.replace('no-js','js');try{var t=localStorage.getItem('observatory-theme');if(t==='light'||t==='dark')d.setAttribute('data-theme',t);if(localStorage.getItem('observatory-motion')==='paused')d.classList.add('motion-paused')}catch(e){}})(document.documentElement);</script>
 <script src="./assets/js/api-config.js?v=0129425f"></script>
 <script src="./assets/js/api-client.js?v=e979806a"></script>
-<script src="./assets/js/reading.js?v=dc829668" defer></script>
+<script src="./assets/js/reading.js?v=7a42998f" defer></script>
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 <link rel="canonical" href="https://elonmusknetworth.org/">
 <meta property="og:url" content="https://elonmusknetworth.org/">
@@ -253,7 +253,7 @@
     <div class="body-detail"><p>A tunnelling company. Published estimates count a stake here while placing the bulk of the fortune in SpaceX and Tesla.</p><p class="body-links"><a href="./companies.html#boring">On the companies board</a><a href="https://www.boringcompany.com/" target="_blank" rel="noopener">Official site <span aria-hidden="true">↗</span></a></p></div>
    </details>
   </div>
-  <p class="orrery-note small">Sizes are not to scale. No split of the figure by company is shown, because none has been verified.</p>
+  <p class="orrery-note small">Sizes are not to scale. What each holding is worth, valued from his filings and summed as a range, is on <a href="./every-holding.html">Every holding, added up</a>.</p>
  </div>
 </section>
 
@@ -333,6 +333,23 @@
     <span class="w-label">Spend $1 million a day</span>
     <span class="w-big" id="w-spend-years">2,877 years</span>
     <span class="w-note" id="w-spend-line">Start today and the last million goes in the year 4903.</span>
+   </div>
+   <div class="w w-whatif panel" id="w-whatif" data-reveal="left">
+    <span class="w-label">What if</span>
+    <span class="w-big wi-fig" id="wi-fig" aria-live="polite">$924,250,232,673</span>
+    <span class="wi-delta" id="wi-delta">At the close on 15 October 2026</span>
+    <span class="wi-row"><label for="wi-t">Tesla</label><input id="wi-t" type="range" min="100" max="1000" step="1" value="362"><output id="wi-to" for="wi-t">$362</output></span>
+    <span class="wi-row"><label for="wi-s">SpaceX</label><input id="wi-s" type="range" min="40" max="500" step="1" value="149"><output id="wi-so" for="wi-s">$149</output></span>
+    <span class="w-note">Drag a share price: the figure moves by exactly what his filed Tesla and SpaceX shares would gain or lose.</span>
+    <button class="button quiet wi-reset" type="button" id="wi-reset">Back to the close</button>
+   </div>
+   <div class="w w-road panel" data-reveal="right">
+    <span class="w-label">The road to $2 trillion</span>
+    <span class="w-big" id="w-road-when">January 2029</span>
+    <span class="w-road-track" aria-hidden="true"><span class="w-road-bar" id="w-road-bar" style="width:46.2%"></span></span>
+    <span class="w-road-ends"><span id="w-road-now">Now $924.3B</span><span>$2T</span></span>
+    <span class="w-note" id="w-road-line">If his fortune kept growing at its 2021 to 2026 pace, about 41% a year, from $151 billion to $839 billion on the March lists. An extrapolation, not a prediction.</span>
+    <a class="w-go" href="./records.html">The record book <span aria-hidden="true">→</span></a>
    </div>
    <div class="w w-pay panel" data-reveal>
     <label class="w-label" for="w-pay">Your pay against it</label>
@@ -505,11 +522,13 @@
 <script src="./assets/js/ticker.js?v=30670c40" defer></script>
 <script src="./assets/js/meter.js?v=1cfad649" defer></script><script src="./assets/js/tape.js?v=25c0fb78" defer></script>
 <script src="./assets/js/facets.js?v=c71cdd90" defer></script>
-<script src="./assets/js/main.js?v=c4611e80" defer></script>
+<script src="./assets/js/main.js?v=0158b9d4" defer></script>
 <script src="./assets/js/trajectory.js?v=f555845b" defer></script>
 <script src="./assets/js/widgets.js?v=73e5752e" defer></script>
 <script type="application/json" id="reading-data">{"ref":{"schema_version":"1.4","status":"publisher_snapshot","is_live":false,"currency":"USD","net_worth_usd":1051000000000,"as_of_date":"2026-10-06","as_of_precision":"date","checked_on":"2026-10-06","publisher":"Forbes","source_name":"Forbes Real-Time Billionaires","source_url":"https://www.forbes.com/real-time-billionaires/","profile_url":"https://www.forbes.com/profile/elon-musk/","list_url":"https://www.forbes.com/real-time-billionaires/","rounding":"Shown on the Forbes Real-Time Billionaires list to the nearest 1 billion US dollars.","rounding_short":"the nearest $1 billion","verification":"Read from the Forbes Real-Time Billionaires list on 6 October 2026, which shows the figure with its change since the previous trading day. Underlying assets not independently audited.","methodology_url":"/methodology.html","revision":"forbes-2026-10-06-v1","previous":[{"revision":"forbes-2026-10-05-v1","net_worth_usd":981000000000,"as_of_date":"2026-10-05","checked_on":"2026-10-05","publisher":"Forbes","source_url":"https://www.forbes.com/profile/elon-musk/","rounding_short":"the nearest $1 billion","replaced_on":"2026-10-06"},{"revision":"forbes-2026-09-30-v1","net_worth_usd":933300000000,"as_of_date":"2026-09-30","checked_on":"2026-09-30","publisher":"Forbes","source_url":"https://www.forbes.com/real-time-billionaires/","rounding_short":"the nearest $100 million","replaced_on":"2026-10-05"},{"revision":"forbes-2026-09-20-v2","net_worth_usd":946500000000,"as_of_date":"2026-09-20","checked_on":"2026-09-20","publisher":"Forbes","source_url":"https://www.forbes.com/profile/elon-musk/","rounding_short":"the nearest $100 million","replaced_on":"2026-09-30"}]},"rates":{"rate_date":"2026-10-05","source_url":"https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html","per_euro":{"USD":1.1204,"INR":107.8915,"GBP":0.8472,"JPY":177.28,"CNY":7.5118,"CAD":1.5969,"AUD":1.6097,"CHF":0.9311,"HKD":8.7925,"SGD":1.4344,"KRW":1505.8,"BRL":5.5849,"MXN":20.3348,"ZAR":18.6263,"SEK":11.2525,"NOK":10.7575,"NZD":2.0038,"TRY":55.0755},"pegs":{"AED":{"per_usd":3.6725,"source":"Central Bank of the UAE peg"},"SAR":{"per_usd":3.75,"source":"Saudi Central Bank peg"}},"official":{"RUB":{"per_usd":83.4839,"date":"2026-10-05","source":"Bank of Russia official rate","url":"https://www.cbr.ru/eng/currency_base/daily/","why":"The ECB has not published a rouble reference rate since March 2022."}},"currencies":[{"code":"INR","name":"Indian rupee","symbol":"₹"},{"code":"GBP","name":"Pound sterling","symbol":"£"},{"code":"EUR","name":"Euro","symbol":"€"},{"code":"AED","name":"UAE dirham","symbol":"AED "},{"code":"JPY","name":"Japanese yen","symbol":"¥"},{"code":"CNY","name":"Chinese yuan","symbol":"CN¥"},{"code":"CAD","name":"Canadian dollar","symbol":"CA$"},{"code":"AUD","name":"Australian dollar","symbol":"A$"},{"code":"CHF","name":"Swiss franc","symbol":"CHF "},{"code":"SAR","name":"Saudi riyal","symbol":"SAR "},{"code":"HKD","name":"Hong Kong dollar","symbol":"HK$"},{"code":"SGD","name":"Singapore dollar","symbol":"S$"},{"code":"KRW","name":"South Korean won","symbol":"₩"},{"code":"BRL","name":"Brazilian real","symbol":"R$"},{"code":"MXN","name":"Mexican peso","symbol":"MX$"},{"code":"ZAR","name":"South African rand","symbol":"R "},{"code":"SEK","name":"Swedish krona","symbol":"SEK "},{"code":"NOK","name":"Norwegian krone","symbol":"NOK "},{"code":"RUB","name":"Russian rouble","symbol":"₽"},{"code":"NZD","name":"New Zealand dollar","symbol":"NZ$"},{"code":"TRY","name":"Turkish lira","symbol":"₺"}],"more":[{"code":"CAD","name":"Canadian dollar","symbol":"CA$"},{"code":"AUD","name":"Australian dollar","symbol":"A$"},{"code":"CHF","name":"Swiss franc","symbol":"CHF "},{"code":"AED","name":"UAE dirham","symbol":"AED "},{"code":"SAR","name":"Saudi riyal","symbol":"SAR "},{"code":"HKD","name":"Hong Kong dollar","symbol":"HK$"},{"code":"SGD","name":"Singapore dollar","symbol":"S$"},{"code":"KRW","name":"South Korean won","symbol":"₩"},{"code":"BRL","name":"Brazilian real","symbol":"R$"},{"code":"MXN","name":"Mexican peso","symbol":"MX$"},{"code":"ZAR","name":"South African rand","symbol":"R "},{"code":"SEK","name":"Swedish krona","symbol":"SEK "},{"code":"NOK","name":"Norwegian krone","symbol":"NOK "},{"code":"RUB","name":"Russian rouble","symbol":"₽"},{"code":"NZD","name":"New Zealand dollar","symbol":"NZ$"},{"code":"TRY","name":"Turkish lira","symbol":"₺"}]},"prices":{"base":{"revision":"forbes-2026-10-06-v1","date":"2026-10-06","basis":"Closing price on the day of the Forbes reading"},"closes":[{"date":"2026-10-05","TSLA":378.73,"SPCX":171.09},{"date":"2026-10-06","TSLA":380.68,"SPCX":171.92},{"date":"2026-10-07","TSLA":377.81,"SPCX":167.6}],"holdings":[{"symbol":"TSLA","shares":413152109,"options":0},{"symbol":"SPCX","shares":4766475230,"options":350000000}]}}</script>
-<script src="./assets/js/elon-index.js?v=8c295064" defer data-elon></script>
+<script type="application/json" id="extras-data">{"close":{"date":"2026-10-15","time":"16:00","usd":924250232673,"TSLA":362.44,"SPCX":148.62},"whatif":{"tsla":413152109,"spcx":5116475230},"road":{"rate":0.40914927879583773}}</script>
+<script src="./assets/js/extras.js?v=074d9b7c" defer></script>
+<script src="./assets/js/elon-index.js?v=2848ee5a" defer data-elon></script>
 <script src="./assets/js/elon-kernel.js?v=7f1d21dc" defer data-elon></script>
 <script src="./assets/js/elon-lang.js?v=eacba231" defer data-elon></script>
 <script src="./assets/js/tools.js?v=346d93d5" defer data-elon></script>
